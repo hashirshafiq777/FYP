@@ -1,0 +1,27 @@
+# Optional: runs MongoDB only, for developers who do not want a local install
+# or an Atlas cluster. Nothing else belongs in this file yet.
+#
+#   docker compose up -d      # start
+#   docker compose down       # stop (data is kept in the named volume)
+#   docker compose down -v    # stop and delete the data
+#
+# Then set in backend/.env:
+#   MONGODB_URI=mongodb://localhost:27017
+
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: legaldocreader-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:

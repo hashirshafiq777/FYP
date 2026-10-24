@@ -1,0 +1,368 @@
+/* =============================================================================
+   /login and /signup — two-column shell with the contract brand panel.
+   ========================================================================== */
+
+.auth {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-block-size: 100dvh;
+}
+
+@media (min-width: 60rem) {
+  .auth {
+    /* The panel is the larger half: it carries the argument for the product. */
+    grid-template-columns: 1.05fr 1fr;
+  }
+}
+
+/* ------------------------------------------------------------ brand panel */
+
+.auth__brand {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  color: var(--text-inverse);
+  background:
+    radial-gradient(42rem 30rem at 20% 0%, rgb(44 89 121 / 55%), transparent 62%),
+    radial-gradient(34rem 26rem at 95% 100%, rgb(168 127 44 / 26%), transparent 60%),
+    var(--ink-950);
+}
+
+@media (min-width: 60rem) {
+  .auth__brand {
+    display: block;
+  }
+}
+
+/* Faint ruled-paper texture behind the whole panel. */
+.auth__brand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 31px,
+    rgb(255 255 255 / 3%) 31px 32px
+  );
+}
+
+.auth__brand-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-inline-size: 34rem;
+  min-block-size: 100%;
+  margin-inline: auto;
+  padding-inline: var(--space-10);
+  padding-block: var(--space-10);
+}
+
+.auth__pitch {
+  max-inline-size: 26ch;
+}
+
+.auth__eyebrow {
+  color: var(--brass-300);
+}
+
+.auth__heading {
+  margin-block-start: var(--space-2);
+  font-size: var(--text-3xl);
+  color: var(--text-inverse);
+}
+
+.auth__body {
+  margin-block-start: var(--space-3);
+  max-inline-size: 42ch;
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-inverse-muted);
+}
+
+:lang(ur) .auth__body {
+  line-height: var(--leading-urdu);
+}
+
+/* --------------------------------------------------- contract illustration */
+
+.contract {
+  perspective: 1200px;
+}
+
+.contract__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-inline: var(--space-5);
+  padding-block: var(--space-5);
+  background: var(--paper-50);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  /* A slight tilt so the panel reads as a document on a desk, not a UI card. */
+  transform: rotate(-1.1deg);
+}
+
+.contract__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.contract__title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-900);
+}
+
+.contract__rule {
+  block-size: 2px;
+  inline-size: 2.5rem;
+  background: var(--brass-500);
+  border-radius: var(--radius-pill);
+}
+
+.contract__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contract__line {
+  display: block;
+  block-size: 5px;
+  background: var(--paper-300);
+  border-radius: var(--radius-pill);
+}
+
+.contract__clause {
+  padding-inline-start: var(--space-3);
+  padding-block: var(--space-2);
+  /* The marker sits on the inline-start edge and flips with direction. */
+  border-inline-start: 3px solid;
+  border-radius: var(--radius-xs);
+}
+
+.contract__clause-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-block-start: var(--space-2);
+}
+
+.contract__line--marked {
+  background: var(--paper-400);
+}
+
+.contract__clause--high {
+  border-color: var(--risk-high-solid);
+  background: var(--risk-high-bg);
+}
+
+.contract__clause--medium {
+  border-color: var(--risk-medium-solid);
+  background: var(--risk-medium-bg);
+}
+
+.contract__clause--low {
+  border-color: var(--risk-low-solid);
+  background: var(--risk-low-bg);
+}
+
+.contract__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.6;
+}
+
+.contract__clause--high .contract__tag {
+  color: var(--risk-high-text);
+}
+.contract__clause--medium .contract__tag {
+  color: var(--risk-medium-text);
+}
+.contract__clause--low .contract__tag {
+  color: var(--risk-low-text);
+}
+
+.contract__tag-en {
+  font-family: var(--font-ui);
+}
+
+.contract__tag-ur {
+  font-family: var(--font-urdu-ui);
+  font-size: var(--text-xs);
+  /* Naskh descenders need a touch more room than the Latin cap height. */
+  line-height: 1.9;
+}
+
+.contract__tag-sep {
+  inline-size: 3px;
+  block-size: 3px;
+  background: currentColor;
+  border-radius: var(--radius-pill);
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------ value points */
+
+.auth__points {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+  border-block-start: 1px solid rgb(255 255 255 / 10%);
+}
+
+.auth__point {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding-block: var(--space-4);
+  font-size: var(--text-sm);
+  border-block-end: 1px solid rgb(255 255 255 / 10%);
+}
+
+.auth__point-num {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  font-variant-numeric: tabular-nums;
+  color: var(--brass-400);
+  /* A clause number is a numeral: never mirrored, never Nastaliq. */
+  direction: ltr;
+  text-align: start;
+}
+
+:lang(ur) .auth__point-num {
+  font-family: var(--font-ui);
+}
+
+.auth__point-text {
+  min-inline-size: 0;
+}
+
+.auth__point strong {
+  display: block;
+  font-weight: var(--weight-semibold);
+  color: var(--text-inverse);
+}
+
+.auth__point-body {
+  display: block;
+  margin-block-start: 2px;
+  color: var(--text-inverse-muted);
+}
+
+.auth__privacy {
+  margin-block-start: auto;
+  padding-block-start: var(--space-5);
+  font-size: var(--text-xs);
+  color: var(--text-inverse-muted);
+}
+
+/* ------------------------------------------------------------ form column */
+
+.auth__panel {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  background: var(--surface-page);
+}
+
+.auth__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-inline: var(--gutter);
+  padding-block: var(--space-4);
+}
+
+@media (min-width: 60rem) {
+  /* The brand panel already shows the logo; one is enough. */
+  .auth__topbar {
+    justify-content: flex-end;
+  }
+
+  .auth__topbar-logo {
+    display: none;
+  }
+}
+
+.auth__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+  inline-size: 100%;
+  max-inline-size: 27rem;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  padding-block: var(--space-6);
+}
+
+.auth__card {
+  padding-inline: var(--space-6);
+  padding-block: var(--space-7);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 30rem) {
+  .auth__card {
+    /* On a phone the card border adds nothing but clutter. */
+    padding-inline: var(--space-5);
+    padding-block: var(--space-6);
+  }
+}
+
+.auth__card-head {
+  margin-block-end: var(--space-6);
+}
+
+.auth__title {
+  font-size: var(--text-2xl);
+}
+
+.auth__subtitle {
+  margin-block-start: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.auth__banner {
+  margin-block-end: var(--space-5);
+}
+
+.auth__footer {
+  margin-block-start: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.auth__legal {
+  padding-inline: var(--gutter);
+  padding-block: var(--space-5);
+  text-align: center;
+}
+
+.auth__legal p {
+  font-size: var(--text-xs);
+  max-inline-size: 48ch;
+  margin-inline: auto;
+}

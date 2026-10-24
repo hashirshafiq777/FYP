@@ -1,0 +1,216 @@
+/* =============================================================================
+   LegalDocReader — design tokens
+   -----------------------------------------------------------------------------
+   Direction: "Statute" — editorial legal-tech. Deep ink navy on warm paper,
+   with a single restrained brass accent. The feel is a well-set legal document
+   rather than a SaaS dashboard: serif display type, generous whitespace,
+   hairline rules instead of heavy cards.
+
+   Every colour, size, radius, shadow and duration used anywhere in the app is
+   declared here. Components must never hard-code a colour or a font size.
+   ========================================================================== */
+
+:root {
+  /* ---------------------------------------------------------------- palette */
+
+  /* Ink — the primary. Deep navy with a trace of warmth so it sits on paper. */
+  --ink-950: #091521;
+  --ink-900: #0f2236;
+  --ink-800: #16314a;
+  --ink-700: #1f4260;
+  --ink-600: #2c5979;
+  --ink-500: #3f7194;
+  --ink-400: #6b97b4;
+  --ink-300: #a3c0d3;
+  --ink-200: #cfdfe9;
+  --ink-100: #e7eff4;
+
+  /* Paper — warm off-white surfaces. Never pure #fff: it reads clinical. */
+  --paper-50: #fdfbf7;
+  --paper-100: #f8f4ec;
+  --paper-200: #f1eade;
+  --paper-300: #e5dbcb;
+  --paper-400: #d2c3ad;
+  --paper-500: #b5a287;
+
+  /* Brass — the single accent. Used sparingly: active marks, highlights,
+     links, the logomark. Never for large fills. */
+  --brass-700: #6b4d16;
+  --brass-600: #8a651f;
+  --brass-500: #a87f2c;
+  --brass-400: #c59a3b;
+  --brass-300: #dfbd68;
+  --brass-200: #efdcae;
+  --brass-100: #f7edd6;
+
+  /* Semantic risk. Always paired with a text label and an icon — never alone. */
+  --risk-high-text: #8f2520;
+  --risk-high-bg: #fbeae8;
+  --risk-high-border: #e8bdb8;
+  --risk-high-solid: #a8302a;
+
+  --risk-medium-text: #7a5000;
+  --risk-medium-bg: #fcf1dc;
+  --risk-medium-border: #e8cf9f;
+  --risk-medium-solid: #b07400;
+
+  --risk-low-text: #1f6048;
+  --risk-low-bg: #e6f3ec;
+  --risk-low-border: #b4d8c6;
+  --risk-low-solid: #2a7d5e;
+
+  /* Status (document processing). */
+  --status-ready-text: var(--risk-low-text);
+  --status-ready-bg: var(--risk-low-bg);
+  --status-ready-border: var(--risk-low-border);
+  --status-processing-text: #1b4f73;
+  --status-processing-bg: #e5f0f7;
+  --status-processing-border: #b6d3e5;
+  --status-failed-text: var(--risk-high-text);
+  --status-failed-bg: var(--risk-high-bg);
+  --status-failed-border: var(--risk-high-border);
+
+  /* ------------------------------------------------------- semantic surfaces */
+
+  --surface-page: var(--paper-100);
+  --surface-raised: var(--paper-50);
+  --surface-sunken: var(--paper-200);
+  --surface-inverse: var(--ink-950);
+  --surface-inverse-raised: var(--ink-900);
+
+  --border-subtle: var(--paper-300);
+  --border-strong: var(--paper-400);
+  --border-inverse: #1d3449;
+
+  --text-primary: var(--ink-900);
+  --text-secondary: #4a5c6b;
+  /* Verified >= 4.5:1 against paper-50, paper-100 and paper-200, so muted
+     text stays AA on every surface it is used on, not just the lightest. */
+  --text-muted: #5b6872;
+  --text-inverse: #eaf1f6;
+  --text-inverse-muted: #9db0c0;
+  --text-accent: var(--brass-700);
+  --text-on-accent: var(--paper-50);
+
+  /* ------------------------------------------------------------- typography */
+
+  --font-display: "Fraunces Variable", "Fraunces", "Iowan Old Style",
+    "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-ui: "IBM Plex Sans Variable", "IBM Plex Sans", "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-urdu-ui: "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-urdu-display: "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  /* Fluid where it matters, fixed where it must stay predictable. */
+  --text-2xs: 0.6875rem; /* 11px — badges only */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.8125rem; /* 13px */
+  --text-base: 0.9375rem; /* 15px — body default */
+  --text-md: 1rem; /* 16px — form inputs (never smaller: iOS zoom) */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.375rem; /* 22px */
+  --text-2xl: 1.75rem; /* 28px */
+  --text-3xl: clamp(1.875rem, 1.5rem + 1.6vw, 2.5rem);
+  --text-4xl: clamp(2.25rem, 1.6rem + 2.8vw, 3.25rem);
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+  /* Urdu needs noticeably more room: descenders and dot stacks collide at 1.55. */
+  --leading-urdu: 2;
+  --leading-urdu-display: 2.1;
+
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-caps: 0.08em;
+
+  /* ---------------------------------------------------------------- spacing */
+
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+
+  --gutter: var(--space-5);
+  --content-max: 76rem;
+
+  /* ----------------------------------------------------------------- radii */
+
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  /* --------------------------------------------------------------- shadows */
+  /* Warm-tinted so shadows sit on paper rather than floating in grey. */
+
+  --shadow-xs: 0 1px 2px rgb(32 24 12 / 6%);
+  --shadow-sm: 0 1px 3px rgb(32 24 12 / 7%), 0 1px 2px rgb(32 24 12 / 4%);
+  --shadow-md: 0 4px 12px rgb(32 24 12 / 8%), 0 1px 3px rgb(32 24 12 / 5%);
+  --shadow-lg: 0 12px 32px rgb(16 28 42 / 12%), 0 2px 8px rgb(16 28 42 / 6%);
+  --shadow-drawer: 0 0 48px rgb(9 21 33 / 28%);
+
+  /* Focus ring — brass on paper, high contrast and unmistakable. */
+  --focus-ring: 0 0 0 2px var(--surface-raised), 0 0 0 4px var(--brass-600);
+  --focus-ring-inverse: 0 0 0 2px var(--ink-950), 0 0 0 4px var(--brass-400);
+
+  /* ---------------------------------------------------------------- motion */
+
+  --dur-instant: 80ms;
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 380ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* --------------------------------------------------------------- z-index */
+
+  --z-base: 0;
+  --z-sticky: 20;
+  --z-backdrop: 30;
+  --z-drawer: 40;
+  --z-dropdown: 50;
+  --z-toast: 60;
+  --z-skip-link: 100;
+
+  /* ------------------------------------------------------------- component */
+
+  --control-height: 2.875rem; /* 46px — comfortably over the 44px touch target */
+  --control-height-sm: 2.25rem;
+  --touch-target: 2.75rem; /* 44px */
+  --sidebar-width: 16.5rem;
+  --topbar-height: 4rem;
+}
+
+/* Urdu swaps the UI face and opens up the line-height. Everything else — the
+   palette, spacing and motion — is shared, so the two languages stay one brand. */
+:root:lang(ur),
+html[lang="ur"] {
+  --font-ui: var(--font-urdu-ui);
+  --leading-normal: var(--leading-urdu);
+  --leading-snug: 1.75;
+  --leading-tight: 1.5;
+  /* Naskh runs optically smaller than Plex at the same px size. */
+  --text-base: 1rem;
+  --text-sm: 0.875rem;
+  --text-xs: 0.8125rem;
+}

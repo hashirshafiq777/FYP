@@ -1,0 +1,11 @@
+# Runtime dependencies — pinned. Python 3.11+ (verified on 3.14).
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.1
+pydantic-settings==2.16.1
+email-validator==2.3.0
+pymongo==4.19.0
+argon2-cffi==25.1.0
+PyJWT==2.15.1
+# Required by PyMongo for mongodb+srv:// (Atlas) connection strings.
+dnspython==2.9.0
