@@ -19,6 +19,9 @@ USERS_COLLECTION = "users"
 REVOKED_TOKENS_COLLECTION = "revoked_tokens"
 # Private, per-user records. Every document carries an `owner_id`.
 DOCUMENTS_COLLECTION = "documents"
+# Module 2: chat threads and their messages. Both carry `owner_id`.
+CONVERSATIONS_COLLECTION = "conversations"
+MESSAGES_COLLECTION = "messages"
 
 
 async def connect_to_mongo() -> AsyncDatabase:
@@ -68,6 +71,14 @@ def get_revoked_tokens_collection():
 
 def get_documents_collection():
     return get_database()[DOCUMENTS_COLLECTION]
+
+
+def get_conversations_collection():
+    return get_database()[CONVERSATIONS_COLLECTION]
+
+
+def get_messages_collection():
+    return get_database()[MESSAGES_COLLECTION]
 
 
 async def ping_database() -> bool:

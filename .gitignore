@@ -35,3 +35,8 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# --- Module 2: AI data (rebuilt with `python -m scripts.build_index`) ---
+backend/data/
+# Source PDFs are large (~56 MB); the extracted text in knowledge/laws/text is committed instead.
+backend/knowledge/laws/pdf/

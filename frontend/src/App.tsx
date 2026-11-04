@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import {
   AgreementsIcon,
-  ChatIcon,
   DocumentsIcon,
   HistoryIcon,
 } from "./components/icons";
@@ -11,6 +10,7 @@ import ProtectedRoute from "./auth/ProtectedRoute";
 import PublicOnlyRoute from "./auth/PublicOnlyRoute";
 import { useAuth } from "./auth/useAuth";
 import AppShell from "./layouts/AppShell";
+import Chat from "./pages/Chat";
 import ComingSoon from "./pages/ComingSoon";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
@@ -47,16 +47,8 @@ export default function App() {
                 />
               }
             />
-            <Route
-              path="/chat"
-              element={
-                <ComingSoon
-                  titleKey="coming.chat.title"
-                  bodyKey="coming.chat.body"
-                  icon={<ChatIcon size={24} />}
-                />
-              }
-            />
+            {/* One route with an optional segment, so opening a thread does not remount the page. */}
+            <Route path="/chat/:conversationId?" element={<Chat />} />
             <Route
               path="/agreements"
               element={

@@ -35,10 +35,16 @@ describe("dictionaries", () => {
       (key) => en[key] === ur[key] && en[key] !== "",
     );
     // Brand name, EN/UR badges, "404" and the Urdu label itself are the only
-    // strings that are meant to be identical in both dictionaries.
+    // strings that are meant to be identical in both dictionaries — plus the
+    // chat's sample questions, which are deliberately written one per input
+    // language (English, Roman Urdu, Urdu) and so are the same in both UIs.
     expect(identical.sort()).toEqual(
       [
         "app.name",
+        "chat.assistant",
+        "chat.suggest.1",
+        "chat.suggest.2",
+        "chat.suggest.3",
         "lang.en",
         "lang.ur",
         "language.english",

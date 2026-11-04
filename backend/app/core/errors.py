@@ -83,6 +83,14 @@ class DatabaseUnavailableError(AppError):
     message = "Database is unavailable."
 
 
+class AIUnavailableError(AppError):
+    """The language model (or the knowledge base) could not answer right now."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    code = "ai_unavailable"
+    message = "The assistant is unavailable right now. Please try again in a moment."
+
+
 def error_body(code: str, message: str, details: Any = None) -> dict[str, Any]:
     body: dict[str, Any] = {"error": {"code": code, "message": message}}
     if details is not None:

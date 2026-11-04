@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -21,6 +22,23 @@ logging.basicConfig(
 logger = logging.getLogger("app")
 
 
+def _warm_up_ai() -> None:
+    """Load the embedding model and the BM25 index so the first question is not slow.
+
+    Runs in a worker thread after startup; any failure is logged and the chat
+    simply pays the cost on its first request instead.
+    """
+    try:
+        from app.ai import embeddings
+        from app.services import knowledge_service
+
+        embeddings.warm_up()
+        knowledge_service._lexical("warm up", 1)  # noqa: SLF001
+        logger.info("AI warm-up complete")
+    except Exception:  # noqa: BLE001
+        logger.exception("AI warm-up failed; the first chat request will load lazily")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     database = await connect_to_mongo()
@@ -29,6 +47,8 @@ async def lifespan(_: FastAPI):
     except Exception:  # noqa: BLE001 - startup must not die if Mongo is briefly down
         # /health will report the database as down; indexes are retried next start.
         logger.exception("Could not create MongoDB indexes at startup")
+    if settings.APP_ENV != "test":
+        asyncio.get_running_loop().run_in_executor(None, _warm_up_ai)
     yield
     await close_mongo_connection()
 

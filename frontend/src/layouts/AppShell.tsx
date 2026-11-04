@@ -104,7 +104,9 @@ export default function AppShell() {
     navigate("/login", { replace: true });
   }, [signOut, navigate]);
 
-  const pageTitleKey = TITLE_BY_PATH[location.pathname];
+  // Nested routes (/chat/:id) take their section title from the first segment.
+  const pageTitleKey =
+    TITLE_BY_PATH[location.pathname] ?? TITLE_BY_PATH[`/${location.pathname.split("/")[1] ?? ""}`];
   const fullName = user?.full_name ?? "";
   const email = user?.email ?? "";
 

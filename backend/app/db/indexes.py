@@ -8,7 +8,9 @@ from pymongo import ASCENDING, DESCENDING
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.db.mongo import (
+    CONVERSATIONS_COLLECTION,
     DOCUMENTS_COLLECTION,
+    MESSAGES_COLLECTION,
     REVOKED_TOKENS_COLLECTION,
     USERS_COLLECTION,
 )
@@ -40,5 +42,14 @@ async def ensure_indexes(database: AsyncDatabase) -> None:
     await database[DOCUMENTS_COLLECTION].create_index(
         [("owner_id", ASCENDING), ("created_at", DESCENDING)],
         name="owner_created_at",
+    )
+    # Chat (Module 2): same owner-first rule as documents.
+    await database[CONVERSATIONS_COLLECTION].create_index(
+        [("owner_id", ASCENDING), ("updated_at", DESCENDING)],
+        name="owner_updated_at",
+    )
+    await database[MESSAGES_COLLECTION].create_index(
+        [("owner_id", ASCENDING), ("conversation_id", ASCENDING), ("created_at", ASCENDING)],
+        name="owner_conversation_created_at",
     )
     logger.info("MongoDB indexes ensured")

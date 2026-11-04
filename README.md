@@ -9,9 +9,17 @@ login, session handling with server-side token revocation), **role-based permiss
 Dashboard inside an app shell, with the other four sections routed to polished
 "coming soon" pages.
 
-Auth is wired to the real API. Everything on the dashboard except the signed-in user's
-name and email is clearly-marked placeholder data. Document upload, OCR, indexing, RAG,
-drafting and export are later modules — see
+**Module 2 — RAG chat (working end to end):** the **Chat** section is live. It answers
+questions about Pakistani law in English, Urdu or Roman Urdu from a shared knowledge base
+of 82 federal statutes (Constitution, PPC, CrPC, family, property, cyber, consumer, labour
+law …) and 40 landmark court judgments, citing the section or case every answer relies on.
+Everything in it is free and runs locally except the language model, which uses Groq's
+free tier. See [Module 2 status](#module-2-status) and
+[Module 2 — setting up the chat](#module-2--setting-up-the-chat).
+
+Auth and chat are wired to the real API. Everything on the dashboard except the signed-in
+user's name and email is clearly-marked placeholder data. Document upload, OCR, risk
+flagging, drafting and export are later modules — see
 [Conventions for future modules](#conventions-for-future-modules).
 
 ```
@@ -38,11 +46,65 @@ drafting and export are later modules — see
 
 **Working checkpoint** — register, log in and log out with two accounts; private data stays
 isolated; the workspace opens. Covered by `backend/tests/test_data_isolation.py` and
-`backend/tests/test_roles.py` (93 backend tests, 148 frontend tests).
+`backend/tests/test_roles.py` (93 backend tests, 148 frontend tests at the end of Module 1).
 
 > Document upload, OCR, extraction, indexing, RAG, drafting and export are **not** in
 > Module 1. The `documents` endpoints store metadata only; `status` already carries the
 > pipeline states a later module will set.
+
+---
+
+## Quick start on a new machine (add the API key)
+
+The repo ships with everything except one thing: the free Groq API key that the chatbot
+uses to write its answers. Without it the site still runs, but Chat shows
+"assistant unavailable". Do this once after cloning:
+
+1. **Get a free key** — go to <https://console.groq.com>, sign in (Google works), open
+   **API Keys → Create API Key**, give it any name, copy the key (it starts with `gsk_`).
+2. **Paste it into the code** — open `backend/app/core/config.py`, find this line (around line 51):
+
+   ```python
+   GROQ_API_KEY: str = "PASTE_YOUR_GROQ_KEY_HERE"
+   ```
+
+   and replace `PASTE_YOUR_GROQ_KEY_HERE` with your key. Keep the quotes. Save the file.
+3. **Build the knowledge base** (one time, ~8 minutes, needs internet for a 220 MB model download):
+
+   ```bash
+   cd backend
+   python -m venv .venv
+   source .venv/Scripts/activate        # PowerShell: .venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   python -m scripts.build_index --reset
+   ```
+
+4. **Run it** — backend `uvicorn app.main:app --reload`, frontend `npm install && npm run dev`
+   (full steps under [Setup](#setup)). Sign in and open **Chat**.
+
+*(Roman Urdu: console.groq.com se free key banao → `backend/app/core/config.py` mein
+`PASTE_YOUR_GROQ_KEY_HERE` ki jagah apni key paste karo → `python -m scripts.build_index --reset`
+chalao → backend aur frontend start karo. Bas.)*
+
+If Groq ever says the key is invalid, make a new one and paste it the same way.
+Full details: [Module 2 — setting up the chat](#module-2--setting-up-the-chat).
+
+---
+
+## Module 2 status
+
+| Task | Scope | Where it lives | Completion check |
+| ---- | ----- | -------------- | ---------------- |
+| **M2-T1** Knowledge base | 82 federal statutes fetched from pakistancode.gov.pk and converted to text; 40 landmark-case summaries | `backend/scripts/fetch_laws.py`, `backend/knowledge/laws/text/`, `backend/knowledge/cases/` | `knowledge/laws/manifest.json` lists 82 statutes; 40 `.md` files in `knowledge/cases` |
+| **M2-T2** Chunking & vector store | Section-aware chunking, multilingual embeddings (local, ONNX), ChromaDB | `app/ai/chunking.py`, `app/ai/embeddings.py`, `app/ai/vector_store.py`, `scripts/build_index.py` | `python -m scripts.build_index` ends with "collection now has ~8000 chunks" |
+| **M2-T3** Hybrid retrieval | Dense + BM25 with reciprocal-rank fusion, section-number boost, Roman-Urdu glossary, optional LLM query rewrite | `services/knowledge_service.py`, `app/ai/glossary.py`, `app/ai/rewrite.py` | "Section 302 PPC ki saza kya hai?" returns PPC s. 302 first |
+| **M2-T4** Grounded answers | Groq (free) with Gemini fallback; answers only from retrieved passages, cite `[Statute s. N]`, reply in the user's language | `app/ai/llm.py`, `app/ai/prompts.py`, `app/ai/language.py`, `services/chat_service.py` | Answer contains citations that match the returned `sources` |
+| **M2-T5** Conversations | Owner-scoped threads and messages in MongoDB, history sent to the model, 404 for other users' threads | `api/v1/chat.py`, `schemas/chat.py`, `services/chat_service.py` | `tests/test_chat.py` (20 tests) |
+| **M2-T6** Chat UI | Conversation list, thread, sources panel, typing state, English/Urdu UI, RTL | `frontend/src/pages/Chat.tsx`, `components/chat/`, `styles/chat.css` | `/chat` works; `Chat.test.tsx` (4 tests) |
+
+Not yet in Module 2: asking about an **uploaded** document (the `mode: "document"`
+path exists in the API but waits for the Documents module to store text), and risk
+flagging.
 
 ---
 
@@ -51,6 +113,8 @@ isolated; the workspace opens. Covered by `backend/tests/test_data_isolation.py`
 - [Prerequisites](#prerequisites)
 - [MongoDB setup](#mongodb-setup)
 - [Backend](#backend)
+- [Quick start on a new machine (add the API key)](#quick-start-on-a-new-machine-add-the-api-key)
+- [Module 2 — setting up the chat](#module-2--setting-up-the-chat)
 - [Frontend](#frontend)
 - [Environment variables](#environment-variables)
 - [API reference](#api-reference)
@@ -163,7 +227,7 @@ To use Swagger against protected endpoints: call `POST /api/v1/auth/login`, copy
 
 ```bash
 cd backend
-pytest                 # 93 tests
+pytest                 # 113 tests
 pytest -v              # per-test names
 pytest tests/test_auth_flow.py::test_logout_revokes_the_token
 ```
@@ -182,6 +246,7 @@ backend/app/
 │   ├── config.py           Pydantic settings + JWT secret policy
 │   ├── security.py         Argon2 hashing, JWT encode/decode
 │   └── errors.py           Error types + centralised handlers
+├── ai/                     Module 2: llm, embeddings, vector_store, chunking, language, glossary, rewrite, prompts
 ├── api/
 │   ├── deps.py             get_current_user + require_admin
 │   └── v1/
@@ -189,16 +254,99 @@ backend/app/
 │       ├── health.py
 │       ├── auth.py         signup / login / me / logout
 │       ├── documents.py    Private, owner-scoped records
+│       ├── chat.py         Module 2: ask, conversations
 │       └── admin.py        Admin-only routes
-├── schemas/                user.py, auth.py, document.py
-├── services/               auth_service.py, document_service.py, admin_service.py
+├── schemas/                user.py, auth.py, document.py, chat.py
+├── services/               auth_service.py, document_service.py, admin_service.py,
+│                           chat_service.py, knowledge_service.py
 └── db/                     mongo.py, indexes.py
 
 backend/scripts/
-└── promote_admin.py        Make the first admin (signup never can)
+├── promote_admin.py        Make the first admin (signup never can)
+├── fetch_laws.py           pakistancode.gov.pk -> knowledge/laws/{pdf,text}
+└── build_index.py          knowledge/ -> data/chroma (ChromaDB)
+
+backend/knowledge/          The shared knowledge base (committed): laws/text/*.txt, cases/*.md
+backend/data/               Git-ignored: embedding model cache + ChromaDB
 ```
 
 ---
+
+## Module 2 — setting up the chat
+
+Everything below is free. Done once per machine, after the normal [Backend setup](#setup).
+
+### 1. Language-model key (Groq, free)
+
+1. Create a free account at <https://console.groq.com> and open **API Keys → Create API Key**.
+2. Open `backend/app/core/config.py` and replace the value of `GROQ_API_KEY`
+   (`"PASTE_YOUR_GROQ_KEY_HERE"`) with your key. Keep the quotes.
+
+That is the only configuration. The model (`llama-3.3-70b-versatile`) is set next to it.
+If Groq ever says the key is invalid or revoked, make a new one and paste it again.
+Optionally set `GEMINI_API_KEY` too (free at <https://aistudio.google.com/apikey>); it is
+used automatically when Groq fails.
+
+> The key lives in a committed file on purpose, as a single-file setup for this project.
+> `.env` can still override it (`GROQ_API_KEY=...`) if you prefer not to commit it.
+
+### 2. Build the knowledge base
+
+```bash
+cd backend
+source .venv/Scripts/activate            # PowerShell: .venv\Scripts\Activate.ps1
+pip install -r requirements.txt          # adds chromadb, fastembed, rank_bm25, pypdf, httpx
+python -m scripts.build_index --reset    # ~8 minutes on a laptop CPU, once
+```
+
+The first run downloads the embedding model (~220 MB) into `backend/data/models/` and
+writes the vector store to `backend/data/chroma/` (~100 MB). Both are git-ignored, which is
+why this step is run on each machine. The statute text it indexes **is** committed
+(`knowledge/laws/text/`, 8 MB), so nothing is fetched from pakistancode.gov.pk.
+
+To refresh or extend the statutes themselves:
+
+```bash
+python -m scripts.fetch_laws --index          # list every federal law on pakistancode.gov.pk
+python -m scripts.fetch_laws --download       # fetch the PDFs named in LAW_LIST (git-ignored)
+python -m scripts.fetch_laws --extract        # PDFs -> knowledge/laws/text/*.txt
+python -m scripts.build_index                 # re-embed (unchanged files are upserted in place)
+```
+
+Add a case by dropping a Markdown file with the same front matter as the existing ones
+into `knowledge/cases/` and running `python -m scripts.build_index --only cases`.
+
+### 3. Run and try it
+
+Start the backend and frontend as usual, sign in, open **Chat**. `GET /api/v1/chat/status`
+(with a token) reports `ready: true` when a key is set and the index is non-empty; the UI
+shows a notice otherwise.
+
+Questions the demo is tuned for (the answer comes back in the language you ask in):
+
+- *What is the punishment for theft under the Pakistan Penal Code?*
+- *Section 302 PPC ki saza kya hai?*
+- *Khula lene ka tareeqa kya hai aur kitna waqt lagta hai?*
+- *کیا پولیس بغیر وارنٹ کے گرفتار کر سکتی ہے؟*
+- *What does Article 25 of the Constitution guarantee?*
+- *Facebook par kisi ki photo bina ijazat lagane ki saza kya hai?* (PECA 2016)
+- *Asia Bibi case mein Supreme Court ne kya faisla kiya?*
+- *What did the Supreme Court decide in Asma Jilani about the doctrine of necessity?*
+
+### How a question is answered
+
+```
+question -> detect language (en / ur / roman-ur)
+         -> expand: Roman-Urdu glossary (khula -> "dissolution of marriage by wife") + optional LLM rewrite
+         -> retrieve: dense (ChromaDB) + BM25 -> reciprocal-rank fusion -> section-number boost
+         -> prompt: system rules + last 4 turns + [labelled passages] + question
+         -> Groq (fallback Gemini) -> answer with [Statute s. N] citations
+         -> store user + assistant messages (owner-scoped) -> response with `sources`
+```
+
+Guardrails: the system prompt forbids answering outside the retrieved passages and asks
+the model to say so when the knowledge base does not cover a question; every answer ends
+with a not-legal-advice line; sources are returned so the user can check the section.
 
 ## Frontend
 
@@ -235,7 +383,7 @@ Set `VITE_API_BASE_URL` in `frontend/.env.local` only when the API is on a diffe
 npm run build        # tsc -b && vite build  → dist/
 npm run typecheck    # TypeScript only
 npm run lint         # oxlint
-npm test             # vitest run (148 tests)
+npm test             # vitest run (152 tests)
 npm run preview      # serve the production build
 ```
 
@@ -248,7 +396,7 @@ npm run preview      # serve the production build
 | `/signup`     | Sign-Up          | Public only |
 | `/dashboard`  | Dashboard        | Protected   |
 | `/documents`  | Coming soon      | Protected   |
-| `/chat`       | Coming soon      | Protected   |
+| `/chat`, `/chat/:conversationId` | Chat (Module 2) | Protected   |
 | `/agreements` | Coming soon      | Protected   |
 | `/history`    | Coming soon      | Protected   |
 | anything else | 404              | Any         |
@@ -281,7 +429,8 @@ frontend/src/
 ├── i18n/                   en.ts, ur.ts, provider, useI18n hook
 ├── layouts/                AuthLayout (brand panel), AppShell (sidebar/drawer/topbar)
 ├── lib/                    validation.ts, apiErrors.ts, initials.ts
-├── pages/                  Login, SignUp, Dashboard, ComingSoon, NotFound
+├── pages/                  Login, SignUp, Dashboard, Chat, ComingSoon, NotFound
+├── components/chat/        Composer, MessageBubble, AnswerText, SourceList
 ├── styles/                 tokens.css + base/components/auth/shell/dashboard
 └── test/                   Vitest setup and provider helper
 ```
@@ -549,6 +698,29 @@ data. From the caller's point of view, a record they do not own simply is not th
 users' private documents are private from everyone, which is the promise the product makes
 about confidential contracts.
 
+### Chat  *(private, per-user)*
+
+All routes need a bearer token. A conversation belonging to another account is a `404`.
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| `GET` | `/chat/status` | `{providers, llm_model, embedding_model, law_chunks, ready}` |
+| `POST` | `/chat/ask` | Ask. Body `{question, conversation_id?, mode?: "law"}`. Omit `conversation_id` to start a thread. Returns `{conversation, question, answer}`; `answer.sources[]` carries `label`, `title`, `section`, `kind` (`statute`/`case`), `url`, `excerpt`, `score`. `503 ai_unavailable` when no provider can answer. |
+| `GET` | `/chat/conversations` | Your threads, newest first (`limit`, `skip`) |
+| `GET` | `/chat/conversations/{id}` | One thread with all its messages |
+| `PATCH` | `/chat/conversations/{id}` | Rename (`{title}`) |
+| `DELETE` | `/chat/conversations/{id}` | Delete the thread and its messages (`204`) |
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/chat/ask \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"question":"Section 302 PPC ki saza kya hai?"}'
+```
+
+Collections: `conversations {owner_id, title, mode, language, message_count, created_at, updated_at}`
+and `messages {owner_id, conversation_id, role, content, language, sources[], provider, created_at}`,
+both indexed owner-first like `documents`.
+
 ### Making the first admin
 
 Signup can never create an admin — `role` is server-assigned and always `user` — so the
@@ -693,9 +865,11 @@ Then register the router in `app/api/v1/router.py`.
 
 ### AI providers
 
-Create `backend/app/ai/` **only when the first AI task starts**, with a thin,
-provider-agnostic wrapper so OpenAI and Gemini can be swapped without touching callers.
-No AI, vector, embedding or OCR dependency belongs in the project before then.
+**Implemented in Module 2** — `backend/app/ai/` holds the provider-agnostic layer:
+`llm.py` (Groq, Gemini fallback; only `generate()` is used elsewhere), `embeddings.py`
+(fastembed, local), `vector_store.py` (ChromaDB), `chunking.py`, `language.py`,
+`glossary.py`, `rewrite.py`, `prompts.py`. Swap a provider by editing `llm.py` alone.
+OCR stays out until the Documents module needs it.
 
 ### Private data vs. the shared knowledge base
 

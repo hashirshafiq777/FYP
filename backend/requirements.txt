@@ -9,3 +9,10 @@ argon2-cffi==25.1.0
 PyJWT==2.15.1
 # Required by PyMongo for mongodb+srv:// (Atlas) connection strings.
 dnspython==2.9.0
+
+# --- Module 2: RAG chat (all free / local) ---
+httpx==0.28.1            # Groq / Gemini REST calls
+chromadb==1.5.9          # local vector store (backend/data/chroma)
+fastembed==0.9.1         # ONNX multilingual embeddings on CPU, no PyTorch
+rank_bm25==0.2.2         # lexical half of hybrid retrieval
+pypdf==6.21.4            # statute PDF -> text (scripts/fetch_laws.py)

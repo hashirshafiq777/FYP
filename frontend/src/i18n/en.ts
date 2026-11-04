@@ -244,6 +244,43 @@ export const en = {
     "Everything you have asked and every document you have analysed, searchable in one place.",
   "coming.badge": "In development",
 
+  // ------------------------------------------------------------------ chat
+  "chat.documentTitle": "Chat",
+  "chat.title": "Ask about Pakistani law",
+  "chat.subtitle": "Answers come from the statutes and judgments in the knowledge base, with the section cited.",
+  "chat.new": "New conversation",
+  "chat.delete": "Delete conversation",
+  "chat.list.label": "Conversations",
+  "chat.list.empty": "Your conversations will appear here.",
+  "chat.mode.law": "Pakistan law",
+  "chat.mode.lawTitle": "Answers are grounded in the shared Pakistan-law knowledge base.",
+  "chat.you": "You",
+  "chat.assistant": "LegalDocReader",
+  "chat.thinking": "Looking up the law and writing an answer",
+  "chat.sources": "Sources ({count})",
+  "chat.source.statute": "Statute",
+  "chat.source.case": "Case",
+  "chat.source.document": "Document",
+  "chat.source.open": "Open the full text",
+  "chat.composer.label": "Your question",
+  "chat.composer.placeholder": "Ask in English, Urdu or Roman Urdu…",
+  "chat.composer.send": "Send",
+  "chat.composer.sending": "Sending…",
+  "chat.composer.hint": "Enter to send, Shift+Enter for a new line.",
+  "chat.welcome.title": "What would you like to know?",
+  "chat.welcome.body":
+    "Ask about criminal, family, property, cyber or constitutional law. The assistant answers in the language you write in and cites the section it relied on.",
+  "chat.suggest.1": "What is the punishment for theft under the Pakistan Penal Code?",
+  "chat.suggest.2": "Khula lene ka tareeqa kya hai aur kitna waqt lagta hai?",
+  "chat.suggest.3": "کیا پولیس بغیر وارنٹ کے گرفتار کر سکتی ہے؟",
+  "chat.suggest.4": "What does Article 25 of the Constitution guarantee?",
+  "chat.notReady.noKey":
+    "The assistant is not configured yet: no language-model key is set on the server.",
+  "chat.notReady.noIndex":
+    "The knowledge base is empty. Run the index build on the server, then try again.",
+  "chat.error.unavailable":
+    "The assistant could not answer just now. Your question is still in the box, try again in a moment.",
+
   // ------------------------------------------------------------------- 404
   "notFound.documentTitle": "Page not found",
   "notFound.code": "404",

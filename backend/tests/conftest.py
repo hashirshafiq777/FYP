@@ -104,7 +104,9 @@ async def client(test_app: None) -> AsyncIterator[httpx.AsyncClient]:
 async def clean_collections(test_app: None):
     """Each test starts with empty collections but keeps the indexes."""
     from app.db.mongo import (
+        get_conversations_collection,
         get_documents_collection,
+        get_messages_collection,
         get_revoked_tokens_collection,
         get_users_collection,
     )
@@ -112,6 +114,8 @@ async def clean_collections(test_app: None):
     await get_users_collection().delete_many({})
     await get_revoked_tokens_collection().delete_many({})
     await get_documents_collection().delete_many({})
+    await get_conversations_collection().delete_many({})
+    await get_messages_collection().delete_many({})
     yield
 
 

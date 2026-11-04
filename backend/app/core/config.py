@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -41,6 +42,38 @@ class Settings(BaseSettings):
     ARGON2_TIME_COST: int = Field(default=3, ge=1)
     ARGON2_MEMORY_COST_KIB: int = Field(default=65536, ge=8192)
     ARGON2_PARALLELISM: int = Field(default=4, ge=1)
+
+    # ------------------------------------------------------------------ AI
+    # Module 2 (RAG chat). Free tiers only. The Groq key lives here on purpose
+    # (team decision: single-file setup for a student project); `.env` can
+    # still override it. If Groq ever revokes the key, create a new free one at
+    # https://console.groq.com/keys and paste it below.
+    GROQ_API_KEY: str = "PASTE_YOUR_GROQ_KEY_HERE"
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    # Optional fallback (https://aistudio.google.com/apikey). Leave blank to disable.
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+    # Local multilingual embeddings (fastembed / ONNX, ~220 MB download on first run).
+    EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    # Where ChromaDB and the embedding model cache live. Relative to backend/.
+    AI_DATA_DIR: str = "data"
+    RAG_TOP_K: int = Field(default=8, ge=1, le=30)
+
+    @property
+    def ai_data_dir(self) -> Path:
+        return (Path(__file__).resolve().parent.parent.parent / self.AI_DATA_DIR).resolve()
+
+    @property
+    def chroma_dir(self) -> Path:
+        return self.ai_data_dir / "chroma"
+
+    @property
+    def ai_cache_dir(self) -> Path:
+        return self.ai_data_dir / "models"
+
+    @property
+    def knowledge_dir(self) -> Path:
+        return Path(__file__).resolve().parent.parent.parent / "knowledge"
 
     @property
     def cors_origins_list(self) -> list[str]:
