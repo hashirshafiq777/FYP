@@ -43,7 +43,9 @@ export default function SourceList({ sources }: SourceListProps) {
                       ? "chat.source.case"
                       : source.kind === "document"
                         ? "chat.source.document"
-                        : "chat.source.statute",
+                        : source.kind === "guide"
+                          ? "chat.source.guide"
+                          : "chat.source.statute",
                   )}
                 </span>
                 <span className="sources__label" dir="ltr">

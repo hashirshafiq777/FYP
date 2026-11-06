@@ -82,6 +82,8 @@ def statutes_named(text: str) -> list[str]:
 def label_for(meta: dict[str, Any]) -> str:
     kind = meta.get("kind", "statute")
     title = str(meta.get("title", "Unknown source"))
+    if kind == "guide":
+        return f"Guide: {title}"
     if kind == "case":
         return f"Case: {title}"
     if kind == "document":

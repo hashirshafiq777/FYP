@@ -44,12 +44,10 @@ class Settings(BaseSettings):
     ARGON2_PARALLELISM: int = Field(default=4, ge=1)
 
     # ------------------------------------------------------------------ AI
-    # Module 2 (RAG chat). Free tiers only. The Groq key lives here on purpose
-    # (team decision: single-file setup for a student project); `.env` can
-    # still override it. If Groq ever revokes the key, create a new free one at
-    # https://console.groq.com/keys and paste it below.
+    # Module 2 (RAG chat). Keep provider keys in the ignored backend/.env file;
+    # never commit real credentials. Create a free key at https://console.groq.com/keys.
     GROQ_API_KEY: str = "PASTE_YOUR_GROQ_KEY_HERE"
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-20b"
     # Optional fallback (https://aistudio.google.com/apikey). Leave blank to disable.
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.0-flash"

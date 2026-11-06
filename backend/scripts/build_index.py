@@ -33,6 +33,7 @@ from app.core.config import settings
 LAW_TEXT_DIR = settings.knowledge_dir / "laws" / "text"
 LAW_MANIFEST = settings.knowledge_dir / "laws" / "manifest.json"
 CASES_DIR = settings.knowledge_dir / "cases"
+GUIDES_DIR = settings.knowledge_dir / "guides"
 CATEGORIES_FILE = settings.knowledge_dir / "categories.json"
 
 
@@ -123,6 +124,68 @@ def load_cases() -> list[dict]:
     return docs
 
 
+def load_guides() -> list[dict]:
+    """Load practical, source-linked legal information guides for citizens."""
+    docs = []
+    for path in sorted(GUIDES_DIR.glob("*.md")):
+        meta, body = _parse_front_matter(path.read_text(encoding="utf-8", errors="ignore"))
+        docs.append(
+            {
+                "doc_id": _doc_id(path),
+                "title": meta.get("title", path.stem.replace("_", " ")),
+                "url": meta.get("url", ""),
+                "kind": "guide",
+                "category": meta.get("category", "practical-guidance"),
+                "text": body,
+            }
+        )
+    return docs
+
+
+def load_all_documents(categories: dict[str, list[str]] | None = None) -> list[dict]:
+    """Load the committed statutes, cases, and practical guides."""
+    if categories is None:
+        categories = json.loads(CATEGORIES_FILE.read_text(encoding="utf-8")) if CATEGORIES_FILE.exists() else {}
+    return load_statutes(categories) + load_cases() + load_guides()
+
+
+def _source_fingerprint(docs: list[dict]) -> str:
+    digest = hashlib.sha256()
+    for doc in docs:
+        digest.update(doc["doc_id"].encode("utf-8"))
+        digest.update(doc["title"].encode("utf-8"))
+        digest.update(doc["text"].encode("utf-8"))
+    return digest.hexdigest()
+
+
+def ensure_knowledge_base() -> int:
+    """Build the local index on first app launch and refresh it when sources change."""
+    docs = load_all_documents()
+    if not docs:
+        raise RuntimeError("No law knowledge sources found in backend/knowledge")
+
+    fingerprint = _source_fingerprint(docs)
+    marker = settings.ai_data_dir / "knowledge-index.sha256"
+    current = marker.read_text(encoding="utf-8").strip() if marker.exists() else ""
+    if current == fingerprint and vector_store.count(LAW_COLLECTION) > 0:
+        return 0
+
+    if vector_store.count(LAW_COLLECTION) > 0:
+        try:
+            vector_store._client().delete_collection(LAW_COLLECTION)  # noqa: SLF001
+            print("knowledge sources changed; rebuilding the local index")
+        except Exception:  # noqa: BLE001
+            pass
+
+    print(f"building local knowledge index from {len(docs)} committed documents")
+    embeddings.warm_up()
+    total = index_documents(docs)
+    settings.ai_data_dir.mkdir(parents=True, exist_ok=True)
+    marker.write_text(fingerprint + "\n", encoding="utf-8")
+    print(f"knowledge index ready: {total} chunks")
+    return total
+
+
 def index_documents(docs: list[dict], *, batch: int = 128) -> int:
     total = 0
     for doc in docs:
@@ -162,7 +225,8 @@ def index_documents(docs: list[dict], *, batch: int = 128) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--reset", action="store_true", help="delete the collection first")
-    parser.add_argument("--only", choices=["statutes", "cases"], help="index one kind only")
+    parser.add_argument("--only", choices=["statutes", "cases", "guides"], help="index one kind only")
+    parser.add_argument("--match", help="index only documents whose title contains this text")
     args = parser.parse_args()
 
     categories: dict[str, list[str]] = {}
@@ -177,19 +241,29 @@ def main() -> None:
             pass
 
     docs: list[dict] = []
-    if args.only != "cases":
-        docs.extend(load_statutes(categories))
-    if args.only != "statutes":
-        docs.extend(load_cases())
+    if args.only is None:
+        docs.extend(load_all_documents(categories))
+    else:
+        if args.only == "statutes":
+            docs.extend(load_statutes(categories))
+        elif args.only == "cases":
+            docs.extend(load_cases())
+        elif args.only == "guides":
+            docs.extend(load_guides())
+    if args.match:
+        docs = [doc for doc in docs if args.match.casefold() in doc["title"].casefold()]
     if not docs:
         print("nothing to index: run `python -m scripts.fetch_laws --download --extract` first", file=sys.stderr)
         sys.exit(1)
 
-    print(f"indexing {len(docs)} documents with {settings.EMBEDDING_MODEL}")
-    embeddings.warm_up()
-    started = time.time()
-    total = index_documents(docs)
-    print(f"done: {total} chunks, collection now has {vector_store.count(LAW_COLLECTION)} chunks, {time.time() - started:.0f}s")
+    if args.only is None and not args.match and not args.reset:
+        ensure_knowledge_base()
+    else:
+        print(f"indexing {len(docs)} documents with {settings.EMBEDDING_MODEL}")
+        embeddings.warm_up()
+        started = time.time()
+        total = index_documents(docs)
+        print(f"done: {total} chunks, collection now has {vector_store.count(LAW_COLLECTION)} chunks, {time.time() - started:.0f}s")
 
 
 if __name__ == "__main__":

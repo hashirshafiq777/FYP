@@ -41,7 +41,7 @@ class Source(BaseModel):
     title: str
     section: str | None = None
     category: str | None = None
-    kind: Literal["statute", "case", "document"] = "statute"
+    kind: Literal["statute", "case", "document", "guide"] = "statute"
     url: str | None = None
     page: int | None = None
     excerpt: str
