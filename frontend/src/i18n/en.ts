@@ -247,7 +247,7 @@ export const en = {
   // ------------------------------------------------------------------ chat
   "chat.documentTitle": "Chat",
   "chat.title": "Ask about Pakistani law",
-  "chat.subtitle": "Answers come from the statutes and judgments in the knowledge base, with the section cited.",
+  "chat.subtitle": "Answers use Pakistani statutes, judgments and practical guides, with sources you can open.",
   "chat.new": "New conversation",
   "chat.delete": "Delete conversation",
   "chat.list.label": "Conversations",
@@ -261,6 +261,7 @@ export const en = {
   "chat.source.statute": "Statute",
   "chat.source.case": "Case",
   "chat.source.document": "Document",
+  "chat.source.guide": "Practical guide",
   "chat.source.open": "Open the full text",
   "chat.composer.label": "Your question",
   "chat.composer.placeholder": "Ask in English, Urdu or Roman Urdu…",
@@ -269,7 +270,7 @@ export const en = {
   "chat.composer.hint": "Enter to send, Shift+Enter for a new line.",
   "chat.welcome.title": "What would you like to know?",
   "chat.welcome.body":
-    "Ask about criminal, family, property, cyber or constitutional law. The assistant answers in the language you write in and cites the section it relied on.",
+    "Ask what steps to take for common legal problems or about criminal, family, property, cyber and constitutional law. Answers cite the statutes, judgments or practical guides they rely on.",
   "chat.suggest.1": "What is the punishment for theft under the Pakistan Penal Code?",
   "chat.suggest.2": "Khula lene ka tareeqa kya hai aur kitna waqt lagta hai?",
   "chat.suggest.3": "کیا پولیس بغیر وارنٹ کے گرفتار کر سکتی ہے؟",

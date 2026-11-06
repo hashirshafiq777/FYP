@@ -1,12 +1,14 @@
 {
   "constitution": ["Constitution of the Islamic Republic"],
-  "citizen-rights": ["Right of Access to Information", "Harassment of Women", "Transgender", "Human Rights", "Citizenship", "Elections Act"],
-  "criminal": ["Penal Code", "Criminal Procedure", "Qanun-e-Shahadat", "Anti-Terrorism", "Narcotic", "Money Laundering", "Accountability", "Probation", "Juvenile", "Zainab", "Trafficking", "Rape", "Hudood", "Hadd", "Arms", "Police", "Illegal Dispossession", "Protection of Pakistan", "Illicit Arms", "Prisons"],
+  "citizen-rights": ["Right of Access to Information", "Harassment of Women", "Transgender", "Human Rights", "Citizenship", "Elections Act", "Rights of Child", "Minorities Rights", "Persons with Disability", "Free and Compulsory Education", "Passports"],
+  "criminal": ["Penal Code", "Criminal Procedure", "Qanun-e-Shahadat", "Anti-Terrorism", "Narcotic", "Money Laundering", "Accountability", "Probation", "Juvenile", "Zainab", "Trafficking", "Rape", "Hudood", "Hadd", "Arms", "Police", "Illegal Dispossession", "Protection of Pakistan", "Illicit Arms", "Prisons", "Federal Investigation", "Fair Trial", "Counter Terrorism Authority", "NADRA"],
   "family": ["Family", "Marriage", "Divorce", "Guardians", "Dowry", "Succession", "Child Protection", "Domestic Violence", "Women's Property", "Anti-Women", "Shariat"],
-  "property": ["Transfer of Property", "Registration Act", "Specific Relief", "Limitation", "Civil Procedure", "Land Acquisition", "Stamp", "Easements", "Partition", "Rent", "Benami", "Trusts"],
-  "business": ["Contract Act", "Sale of Goods", "Partnership", "Arbitration", "Negotiable", "Companies", "Financial Institutions", "Competition", "Copyright", "Trade Marks", "Patents"],
+  "property": ["Transfer of Property", "Registration Act", "Specific Relief", "Limitation", "Civil Procedure", "Land Acquisition", "Stamp", "Easements", "Partition", "Rent", "Benami", "Trusts", "Waqf Properties", "Real Estate"],
+  "business": ["Contract Act", "Sale of Goods", "Partnership", "Arbitration", "Negotiable", "Companies", "Financial Institutions", "Competition", "Copyright", "Trade Marks", "Patents", "General Cosmetics", "Price Control", "Digital Presence Proceeds Tax"],
   "cyber": ["Electronic Crimes", "Electronic Transactions", "Telecommunication", "Electronic Media"],
   "consumer": ["Consumer Protection"],
-  "labour": ["Industrial Relations", "Minimum Wages", "Bonded Labour", "Employment of Children"],
-  "courts": ["Supreme Court", "Legal Practitioners", "Dispute Resolution", "Cost of Litigation", "Letters of Administration"]
+  "labour": ["Payment of Wages", "Industrial Relations", "Minimum Wages", "Bonded Labour", "Employment of Children"],
+  "courts": ["Supreme Court", "Legal Practitioners", "Dispute Resolution", "Cost of Litigation", "Letters of Administration", "Legal Aid", "Lawyers Welfare"],
+  "environment": ["Environmental Protection"],
+  "food-safety": ["Food Safety", "Agri-trade", "Halal Authority"]
 }

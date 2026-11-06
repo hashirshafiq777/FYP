@@ -32,6 +32,9 @@ def _warm_up_ai() -> None:
         from app.ai import embeddings
         from app.services import knowledge_service
 
+        from scripts.build_index import ensure_knowledge_base
+
+        ensure_knowledge_base()
         embeddings.warm_up()
         knowledge_service._lexical("warm up", 1)  # noqa: SLF001
         logger.info("AI warm-up complete")

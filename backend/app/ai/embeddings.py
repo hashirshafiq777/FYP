@@ -18,6 +18,9 @@ logger = logging.getLogger("app.ai.embeddings")
 
 @lru_cache
 def _model():
+    import truststore
+
+    truststore.inject_into_ssl()
     from fastembed import TextEmbedding
 
     logger.info("Loading embedding model %s (first run downloads it)", settings.EMBEDDING_MODEL)

@@ -16,7 +16,7 @@ export interface Source {
   title: string;
   section: string | null;
   category: string | null;
-  kind: "statute" | "case" | "document";
+  kind: "statute" | "case" | "document" | "guide";
   url: string | null;
   page: number | null;
   excerpt: string;

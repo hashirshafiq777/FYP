@@ -11,7 +11,7 @@ Dashboard inside an app shell, with the other four sections routed to polished
 
 **Module 2 — RAG chat (working end to end):** the **Chat** section is live. It answers
 questions about Pakistani law in English, Urdu or Roman Urdu from a shared knowledge base
-of 82 federal statutes (Constitution, PPC, CrPC, family, property, cyber, consumer, labour
+of 104 federal / ICT statutes (Constitution, PPC, CrPC, family, property, cyber, consumer, labour
 law …) and 40 landmark court judgments, citing the section or case every answer relies on.
 Everything in it is free and runs locally except the language model, which uses Groq's
 free tier. See [Module 2 status](#module-2-status) and
@@ -54,39 +54,37 @@ isolated; the workspace opens. Covered by `backend/tests/test_data_isolation.py`
 
 ---
 
-## Quick start on a new machine (add the API key)
+## Quick start on a new machine
 
-The repo ships with everything except one thing: the free Groq API key that the chatbot
-uses to write its answers. Without it the site still runs, but Chat shows
-"assistant unavailable". Do this once after cloning:
+The law corpus and chat feature are included. To use Chat, provide your own Groq API key and
+connect a local MongoDB installation or your own Atlas cluster. Install Python and Node.js as
+listed under [Prerequisites](#prerequisites), then follow these steps:
 
-1. **Get a free key** — go to <https://console.groq.com>, sign in (Google works), open
+1. **Get a free key** — go to <https://console.groq.com>, sign in, open
    **API Keys → Create API Key**, give it any name, copy the key (it starts with `gsk_`).
-2. **Paste it into the code** — open `backend/app/core/config.py`, find this line (around line 51):
+2. **Set up the backend:**
 
-   ```python
-   GROQ_API_KEY: str = "PASTE_YOUR_GROQ_KEY_HERE"
-   ```
-
-   and replace `PASTE_YOUR_GROQ_KEY_HERE` with your key. Keep the quotes. Save the file.
-3. **Build the knowledge base** (one time, ~8 minutes, needs internet for a 220 MB model download):
-
-   ```bash
+   ```powershell
    cd backend
    python -m venv .venv
-   source .venv/Scripts/activate        # PowerShell: .venv\Scripts\Activate.ps1
+   .venv\Scripts\Activate.ps1
    pip install -r requirements.txt
-   python -m scripts.build_index --reset
+   Copy-Item .env.example .env
    ```
 
-4. **Run it** — backend `uvicorn app.main:app --reload`, frontend `npm install && npm run dev`
-   (full steps under [Setup](#setup)). Sign in and open **Chat**.
+   Put your key in `backend/.env` as `GROQ_API_KEY=...`. Keep `.env` private. Start local MongoDB, or set `MONGODB_URI` to your own Atlas cluster.
+3. **Set up the frontend:**
 
-*(Roman Urdu: console.groq.com se free key banao → `backend/app/core/config.py` mein
-`PASTE_YOUR_GROQ_KEY_HERE` ki jagah apni key paste karo → `python -m scripts.build_index --reset`
-chalao → backend aur frontend start karo. Bas.)*
+   ```powershell
+   cd frontend
+   npm ci
+   ```
 
-If Groq ever says the key is invalid, make a new one and paste it the same way.
+4. **Run the app:** start the backend with `uvicorn app.main:app --reload` from `backend`, then run `npm run dev` from `frontend`. Open <http://localhost:5173> and sign in.
+
+The laws, case summaries, and practical guides are already included in the repository. On first backend startup, the app downloads the local embedding model and builds its searchable index automatically; allow several minutes and keep the internet connected for this first run. No law files need to be added by hand and no manual index command is required.
+
+If Groq says the key is invalid, create a new one and update `backend/.env`.
 Full details: [Module 2 — setting up the chat](#module-2--setting-up-the-chat).
 
 ---
@@ -95,8 +93,8 @@ Full details: [Module 2 — setting up the chat](#module-2--setting-up-the-chat)
 
 | Task | Scope | Where it lives | Completion check |
 | ---- | ----- | -------------- | ---------------- |
-| **M2-T1** Knowledge base | 82 federal statutes fetched from pakistancode.gov.pk and converted to text; 40 landmark-case summaries | `backend/scripts/fetch_laws.py`, `backend/knowledge/laws/text/`, `backend/knowledge/cases/` | `knowledge/laws/manifest.json` lists 82 statutes; 40 `.md` files in `knowledge/cases` |
-| **M2-T2** Chunking & vector store | Section-aware chunking, multilingual embeddings (local, ONNX), ChromaDB | `app/ai/chunking.py`, `app/ai/embeddings.py`, `app/ai/vector_store.py`, `scripts/build_index.py` | `python -m scripts.build_index` ends with "collection now has ~8000 chunks" |
+| **M2-T1** Knowledge base | 104 federal / ICT statutes fetched from pakistancode.gov.pk and converted to text; 40 landmark-case summaries; 10 practical guides for common citizen legal problems | `backend/scripts/fetch_laws.py`, `backend/knowledge/laws/text/`, `backend/knowledge/cases/`, `backend/knowledge/guides/` | `knowledge/laws/manifest.json` lists 104 statutes; 40 case summaries and 10 practical guides |
+| **M2-T2** Chunking & vector store | Section-aware chunking, multilingual embeddings (local, ONNX), ChromaDB | `app/ai/chunking.py`, `app/ai/embeddings.py`, `app/ai/vector_store.py`, `scripts/build_index.py` | First backend launch builds the local index from the committed corpus (~8,700 chunks) |
 | **M2-T3** Hybrid retrieval | Dense + BM25 with reciprocal-rank fusion, section-number boost, Roman-Urdu glossary, optional LLM query rewrite | `services/knowledge_service.py`, `app/ai/glossary.py`, `app/ai/rewrite.py` | "Section 302 PPC ki saza kya hai?" returns PPC s. 302 first |
 | **M2-T4** Grounded answers | Groq (free) with Gemini fallback; answers only from retrieved passages, cite `[Statute s. N]`, reply in the user's language | `app/ai/llm.py`, `app/ai/prompts.py`, `app/ai/language.py`, `services/chat_service.py` | Answer contains citations that match the returned `sources` |
 | **M2-T5** Conversations | Owner-scoped threads and messages in MongoDB, history sent to the model, 404 for other users' threads | `api/v1/chat.py`, `schemas/chat.py`, `services/chat_service.py` | `tests/test_chat.py` (20 tests) |
@@ -278,44 +276,21 @@ Everything below is free. Done once per machine, after the normal [Backend setup
 
 ### 1. Language-model key (Groq, free)
 
-1. Create a free account at <https://console.groq.com> and open **API Keys → Create API Key**.
-2. Open `backend/app/core/config.py` and replace the value of `GROQ_API_KEY`
-   (`"PASTE_YOUR_GROQ_KEY_HERE"`) with your key. Keep the quotes.
+Create a free account at https://console.groq.com, create an API key, then put it in the
+ignored backend/.env file as GROQ_API_KEY=... . Never commit a real key. The default model
+is openai/gpt-oss-20b. Optionally set GEMINI_API_KEY; it is used automatically if Groq fails.
 
-That is the only configuration. The model (`llama-3.3-70b-versatile`) is set next to it.
-If Groq ever says the key is invalid or revoked, make a new one and paste it again.
-Optionally set `GEMINI_API_KEY` too (free at <https://aistudio.google.com/apikey>); it is
-used automatically when Groq fails.
+### 2. Knowledge base
 
-> The key lives in a committed file on purpose, as a single-file setup for this project.
-> `.env` can still override it (`GROQ_API_KEY=...`) if you prefer not to commit it.
+All statute text, case summaries, and practical guides are committed under backend/knowledge/.
+On first backend startup, the app downloads the local embedding model and builds its searchable
+index in the background from these sources. Keep the internet connected and allow several minutes
+on first launch. The generated model and index stay in ignored backend/data/; users do not need
+to add law files or run a separate indexing command. The app reports ready after indexing finishes.
 
-### 2. Build the knowledge base
-
-```bash
-cd backend
-source .venv/Scripts/activate            # PowerShell: .venv\Scripts\Activate.ps1
-pip install -r requirements.txt          # adds chromadb, fastembed, rank_bm25, pypdf, httpx
-python -m scripts.build_index --reset    # ~8 minutes on a laptop CPU, once
-```
-
-The first run downloads the embedding model (~220 MB) into `backend/data/models/` and
-writes the vector store to `backend/data/chroma/` (~100 MB). Both are git-ignored, which is
-why this step is run on each machine. The statute text it indexes **is** committed
-(`knowledge/laws/text/`, 8 MB), so nothing is fetched from pakistancode.gov.pk.
-
-To refresh or extend the statutes themselves:
-
-```bash
-python -m scripts.fetch_laws --index          # list every federal law on pakistancode.gov.pk
-python -m scripts.fetch_laws --download       # fetch the PDFs named in LAW_LIST (git-ignored)
-python -m scripts.fetch_laws --extract        # PDFs -> knowledge/laws/text/*.txt
-python -m scripts.build_index                 # re-embed (unchanged files are upserted in place)
-```
-
-Add a case by dropping a Markdown file with the same front matter as the existing ones
-into `knowledge/cases/` and running `python -m scripts.build_index --only cases`.
-
+Maintainers can refresh the local index with python -m scripts.build_index --reset. Add a case
+or practical guide under knowledge/cases/ or knowledge/guides/; a changed source corpus is
+automatically reindexed on the next backend launch.
 ### 3. Run and try it
 
 Start the backend and frontend as usual, sign in, open **Chat**. `GET /api/v1/chat/status`

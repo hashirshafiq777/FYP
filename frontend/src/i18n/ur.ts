@@ -271,6 +271,7 @@ const ur: Dictionary = {
   "chat.source.statute": "قانون",
   "chat.source.case": "مقدمہ",
   "chat.source.document": "دستاویز",
+  "chat.source.guide": "عملی رہنمائی",
   "chat.source.open": "مکمل متن کھولیں",
   "chat.composer.label": "آپ کا سوال",
   "chat.composer.placeholder": "انگریزی، اردو یا رومن اردو میں پوچھیں…",

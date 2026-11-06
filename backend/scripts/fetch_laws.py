@@ -34,6 +34,7 @@ LAW_LIST = [
     "Constitution of the Islamic Republic of Pakistan",
     "Right of Access to Information Act, 2017",
     "Protection Against Harassment of Women at the Work Place Act, 2010",
+    "Payment of Wages Act, 1936",
         "National Commission for Human Rights Act, 2012",
     # Criminal
     "Pakistan Penal Code",
@@ -118,6 +119,28 @@ LAW_LIST = [
     "Alternative Dispute Resolution Act, 2017",
     "Costs of Litigation Act, 2017",
     "Letters of Administration and Succession Certificates Act, 2020",
+    # Additional federal / Islamabad Capital Territory laws
+    "Federal Investigation Agency Act (FIA), 1974",
+    "Investigation for fair Trial Act, 2013",
+    "National Counter Terrorism Authority (NaCTA) Act, 2013",
+    "National Database and Registration Authority Ordinance (NADRA), 2000",
+    "Passports Act, 1974",
+    "Pakistan Environmental Protection Act, 1997",
+    "National Commission on the Rights of Child Act, 2017",
+    "National Commission for Minorities Rights Act, 2025",
+    "Legal Aid and Justice Authority Act, 2020",
+    "Lawyers Welfare and Protection Act, 2023",
+    "ICT Rights of Persons with Disability Act, 2020",
+    "Right to Free and Compulsory Education Act, 2012",
+    "Islamabad Capital Territory Child Marriage Restraint Act, 2025",
+    "Islamabad Capital Territory Food Safety Act, 2021",
+    "National Agri-trade and Food Safety Authority Act, 2026",
+    "Pakistan General Cosmetics Act, 2023",
+    "Pakistan Halal Authority Act, 2016",
+    "Price Control and Prevention of Profiteering and Hoarding Act, 1977",
+    "Digital Presence Proceeds Tax Act, 2025",
+    "Islamabad Capital Territory Waqf Properties Act, 2020",
+    "Islamabad Real Estate (Regulation and Development) Act, 2020",
 ]
 
 HEADERS = {"User-Agent": "LegalDocReader-FYP corpus builder (student project)"}
