@@ -378,6 +378,52 @@
   color: var(--ink-900);
 }
 
+.answer__rule {
+  margin-block: var(--space-4);
+  border: none;
+  border-block-start: 1px solid var(--border-subtle);
+}
+
+/* Tables the model produces. Wrapped so a wide one scrolls inside the bubble
+   instead of stretching the whole chat column. */
+.answer__table-wrap {
+  overflow-x: auto;
+  /* Let the table reach the bubble's padding edge rather than looking inset. */
+  margin-inline: calc(var(--space-1) * -1);
+  padding-inline: var(--space-1);
+}
+
+.answer__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  /* Long legal phrases should wrap, not force a very wide table. */
+  table-layout: auto;
+}
+
+.answer__table th,
+.answer__table td {
+  /* `start`, not `left`: the answer mirrors in Urdu. */
+  text-align: start;
+  vertical-align: top;
+  padding-inline: var(--space-3);
+  padding-block: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  overflow-wrap: anywhere;
+  min-inline-size: 7rem;
+}
+
+.answer__table th {
+  font-weight: var(--weight-semibold);
+  color: var(--ink-900);
+  background: var(--paper-200);
+  white-space: nowrap;
+}
+
+.answer__table tbody tr:nth-child(even) td {
+  background: var(--paper-100);
+}
+
 .answer__cite {
   display: inline-block;
   margin-inline: 0.15rem;

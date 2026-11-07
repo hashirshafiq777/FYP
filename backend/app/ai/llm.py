@@ -20,6 +20,11 @@ class LLMUnavailable(RuntimeError):
     """No configured provider could answer."""
 
 
+def _supports_reasoning_effort(model: str) -> bool:
+    """Only reasoning models accept the parameter; others reject it with a 400."""
+    return "gpt-oss" in model.lower()
+
+
 @dataclass
 class Message:
     role: str  # "system" | "user" | "assistant"
@@ -29,12 +34,18 @@ class Message:
 async def _groq(messages: list[Message], *, temperature: float, max_tokens: int) -> str:
     if not settings.GROQ_API_KEY or settings.GROQ_API_KEY.startswith("PASTE_"):
         raise LLMUnavailable("GROQ_API_KEY is not set")
-    payload = {
+    payload: dict[str, object] = {
         "model": settings.GROQ_MODEL,
         "messages": [{"role": m.role, "content": m.content} for m in messages],
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+    # gpt-oss reasons before it answers, and that reasoning is charged against
+    # max_tokens. Left at the default effort it can consume the whole budget and
+    # return an EMPTY `content` with finish_reason="length" - which looked like a
+    # blank reply in the UI. "low" keeps reasoning short so the answer fits.
+    if _supports_reasoning_effort(settings.GROQ_MODEL) and settings.LLM_REASONING_EFFORT:
+        payload["reasoning_effort"] = settings.LLM_REASONING_EFFORT
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
             "https://api.groq.com/openai/v1/chat/completions",
@@ -44,7 +55,15 @@ async def _groq(messages: list[Message], *, temperature: float, max_tokens: int)
     if response.status_code != 200:
         raise LLMUnavailable(f"Groq {response.status_code}: {response.text[:200]}")
     data = response.json()
-    return data["choices"][0]["message"]["content"].strip()
+    choice = data["choices"][0]
+    # `content` can be null as well as empty, so do not call .strip() on it blind.
+    text = (choice["message"].get("content") or "").strip()
+    if not text:
+        raise LLMUnavailable(
+            f"Groq returned an empty answer (finish_reason="
+            f"{choice.get('finish_reason')!r}); the reasoning budget was probably exhausted"
+        )
+    return text
 
 
 async def _gemini(messages: list[Message], *, temperature: float, max_tokens: int) -> str:
@@ -72,19 +91,28 @@ async def _gemini(messages: list[Message], *, temperature: float, max_tokens: in
         raise LLMUnavailable(f"Gemini {response.status_code}: {response.text[:200]}")
     data = response.json()
     try:
-        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        text = (data["candidates"][0]["content"]["parts"][0]["text"] or "").strip()
     except (KeyError, IndexError) as exc:
         raise LLMUnavailable(f"Gemini returned no text: {data}") from exc
+    if not text:
+        raise LLMUnavailable("Gemini returned an empty answer")
+    return text
 
 
 async def generate(
     messages: list[Message],
     *,
     temperature: float = 0.2,
-    max_tokens: int = 1024,
+    max_tokens: int | None = None,
     prefer: str | None = None,
 ) -> tuple[str, str]:
-    """Return (answer_text, provider_name). Tries Groq, then Gemini."""
+    """Return (answer_text, provider_name). Tries Groq, then Gemini.
+
+    A provider that answers with an empty string is treated as a failure, so the
+    next provider gets a turn rather than the user being shown a blank reply.
+    """
+    if max_tokens is None:
+        max_tokens = settings.LLM_MAX_TOKENS
     order = ["groq", "gemini"]
     if prefer in order:
         order.remove(prefer)

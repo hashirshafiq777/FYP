@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     # Where ChromaDB and the embedding model cache live. Relative to backend/.
     AI_DATA_DIR: str = "data"
     RAG_TOP_K: int = Field(default=8, ge=1, le=30)
+    # Answer budget. gpt-oss is a *reasoning* model: its hidden reasoning is
+    # charged against max_tokens, so a tight budget gets spent thinking and the
+    # visible answer comes back truncated - or empty.
+    LLM_MAX_TOKENS: int = Field(default=3072, ge=256, le=32768)
+    # "low" | "medium" | "high". Only sent for models that support it (gpt-oss).
+    # Low cuts reasoning roughly six-fold, which is what leaves room for the answer.
+    LLM_REASONING_EFFORT: str = "low"
 
     @property
     def ai_data_dir(self) -> Path:
