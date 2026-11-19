@@ -54,23 +54,6 @@ isolated; the workspace opens. Covered by `backend/tests/test_data_isolation.py`
 
 ---
 
-## One-command start on Windows
-
-1. Copy `backend/.env` from a machine that already runs the app into the `backend` folder
-   (it is not in Git: it holds the database link).
-2. In PowerShell, from the repo folder, run:
-
-   ```powershell
-   powershell -ExecutionPolicy Bypass -File .\start-app.ps1
-   ```
-
-The first run installs the Python and Node packages, asks for a free Groq API key if none
-is set, builds the law index (about 8 minutes) and opens <http://localhost:5173>. Later runs
-skip what is already done and just start the app. `start-app.ps1 -CheckOnly` reports what is
-ready without changing or starting anything.
-
----
-
 ## Quick start on a new machine
 
 The law corpus and chat feature are included. To use Chat, provide your own Groq API key and
