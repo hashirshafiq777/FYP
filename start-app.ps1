@@ -1,5 +1,5 @@
 # LegalDocReader - one-step setup and start for Windows.
-# Double-click START-APP.bat (it runs this script). Safe to run every time:
+# Run: powershell -ExecutionPolicy Bypass -File .start-app.ps1   Safe to run every time:
 # steps that are already done are skipped.
 #
 #   -CheckOnly   report what is ready and what is missing, change nothing, start nothing
