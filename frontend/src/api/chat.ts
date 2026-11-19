@@ -40,6 +40,8 @@ export interface Conversation {
   mode: ChatMode;
   language: ChatLanguage;
   document_id: string | null;
+  /** Title of the attached document, for conversations in document mode. */
+  document_title?: string | null;
   message_count: number;
   created_at: string;
   updated_at: string;
@@ -103,7 +105,13 @@ export function renameConversation(id: string, title: string): Promise<Conversat
 
 export function ask(
   question: string,
-  options: { conversationId?: string | null; mode?: ChatMode; signal?: AbortSignal } = {},
+  options: {
+    conversationId?: string | null;
+    mode?: ChatMode;
+    /** One of the user's uploaded documents to answer from (switches the thread to it). */
+    documentId?: string | null;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<AskResponse> {
   return request<AskResponse>("/chat/ask", {
     method: "POST",
@@ -111,7 +119,9 @@ export function ask(
     body: {
       question,
       conversation_id: options.conversationId ?? null,
-      mode: options.mode ?? "law",
+      mode: options.documentId ? "document" : (options.mode ?? "law"),
+      // Only sent when a file is attached; a follow-up relies on the thread.
+      ...(options.documentId ? { document_id: options.documentId } : {}),
     },
     signal: options.signal,
     timeoutMs: ASK_TIMEOUT_MS,

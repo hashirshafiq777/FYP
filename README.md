@@ -17,7 +17,7 @@ Everything in it is free and runs locally except the language model, which uses 
 free tier. See [Module 2 status](#module-2-status) and
 [Module 2 — setting up the chat](#module-2--setting-up-the-chat).
 
-Auth and chat are wired to the real API. Everything on the dashboard except the signed-in
+Auth, chat and documents are wired to the real API. Everything on the dashboard except the signed-in
 user's name and email is clearly-marked placeholder data. Document upload, OCR, risk
 flagging, drafting and export are later modules — see
 [Conventions for future modules](#conventions-for-future-modules).
@@ -100,9 +100,36 @@ Full details: [Module 2 — setting up the chat](#module-2--setting-up-the-chat)
 | **M2-T5** Conversations | Owner-scoped threads and messages in MongoDB, history sent to the model, 404 for other users' threads | `api/v1/chat.py`, `schemas/chat.py`, `services/chat_service.py` | `tests/test_chat.py` (20 tests) |
 | **M2-T6** Chat UI | Conversation list, thread, sources panel, typing state, English/Urdu UI, RTL | `frontend/src/pages/Chat.tsx`, `components/chat/`, `styles/chat.css` | `/chat` works; `Chat.test.tsx` (4 tests) |
 
-Not yet in Module 2: asking about an **uploaded** document (the `mode: "document"`
-path exists in the API but waits for the Documents module to store text), and risk
-flagging.
+Asking about an **uploaded** document is now live — see Module 3 below. Risk flagging is
+still to come.
+
+---
+
+## Module 3 status
+
+Document upload, text extraction and OCR, on branch `feature/document-upload-ocr`.
+
+| Task | Scope | Where it lives | Completion check |
+| ---- | ----- | -------------- | ---------------- |
+| **M3-T1** Upload | PDF, JPG/PNG/WEBP, DOCX, TXT up to 15 MB; type judged from the bytes, not the name; file kept under the git-ignored `backend/data/uploads/<owner>/<id>.<ext>` | `api/v1/documents.py` (`POST /documents/upload`), `services/document_service.py` | `201` with `status: "queued"`; an `.exe` renamed `.pdf` gets `415`; an oversized file `413` |
+| **M3-T2** Text extraction | Page-by-page text from PDF (PyMuPDF), Word (python-docx) and text files, as a background task that moves `status` through `extracting → ocr → indexing → ready \| failed` | `app/ai/extraction.py`, `services/document_processing.py` | `GET /documents/{id}` returns `pages[]` with the text of each page |
+| **M3-T3** OCR | A photo, or a PDF page with no text layer, is read by a **vision model** (Groq, Gemini fallback). English and Urdu | `app/ai/vision.py` | A scanned page comes back with `method: "ocr"`; without a key the document fails with `error: "ocr_unavailable"` and can be retried |
+| **M3-T4** Field extraction | Name, father's name, CNIC number, dates, addresses, parties, amounts… pulled out as `fields[]` with stable keys, ready to pre-fill agreements later | `app/ai/fields.py` | An uploaded CNIC shows its details on the Documents page |
+| **M3-T5** Chat over a document | Attach a file in the chat (paperclip) or press "Ask about this document"; answers come only from that document and cite `[p. N]`. Short documents are sent whole, long ones through owner-filtered vector retrieval | `services/chat_service.py`, `services/knowledge_service.py` | `tests/test_document_upload.py` (20 tests) |
+| **M3-T6** Documents page | Upload box, list with live status, extracted details and text, retry, delete; English/Urdu, RTL | `frontend/src/pages/Documents.tsx`, `components/chat/Composer.tsx`, `styles/documents.css` | `Documents.test.tsx` (7 tests), `Chat.test.tsx` |
+
+**Setup for this module:** `pip install -r requirements.txt` (adds PyMuPDF, python-docx,
+python-multipart, Pillow). OCR and field extraction use the same `GROQ_API_KEY` as the chat,
+with `GROQ_VISION_MODEL` (default `qwen/qwen3.8-27b`) for images; text PDFs, DOCX and TXT
+are read without any key.
+
+**Privacy note:** scans and photos are sent to the vision provider to be read. The
+Documents page says so next to the upload button. Text PDFs, DOCX and TXT are read locally;
+their extracted text goes to the language model only for field extraction and when the user
+asks a question about them.
+
+Not in this module: agreement generation (the extracted `fields` are stored for it), risk
+flagging, and editing an extracted field by hand.
 
 ---
 

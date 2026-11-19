@@ -253,6 +253,37 @@ export function UploadIcon(props: IconProps) {
   );
 }
 
+export function PaperclipIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      {props.title ? <title>{props.title}</title> : null}
+      <path d="m20 11.5-7.9 7.9a4.6 4.6 0 0 1-6.5-6.5l8.2-8.2a3.1 3.1 0 0 1 4.4 4.4l-8.2 8.2a1.55 1.55 0 0 1-2.2-2.2l7.5-7.5" />
+    </svg>
+  );
+}
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      {props.title ? <title>{props.title}</title> : null}
+      <path d="M4.5 6.75h15" />
+      <path d="M9.25 6.75V5A1.25 1.25 0 0 1 10.5 3.75h3A1.25 1.25 0 0 1 14.75 5v1.75" />
+      <path d="M6.5 6.75 7.3 19a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12.25" />
+      <path d="M10.25 10.5v6M13.75 10.5v6" />
+    </svg>
+  );
+}
+
+export function RefreshIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      {props.title ? <title>{props.title}</title> : null}
+      <path d="M19.5 12a7.5 7.5 0 1 1-2.6-5.7" />
+      <path d="M19.75 4.25v4.5h-4.5" />
+    </svg>
+  );
+}
+
 export function DraftIcon(props: IconProps) {
   return (
     <svg {...base(props)}>

@@ -19,7 +19,7 @@ from app.ai.language import detect
 from app.ai.llm import LLMUnavailable, Message
 from app.api.deps import CurrentUser
 from app.core.config import settings
-from app.core.errors import AIUnavailableError, ResourceNotFoundError
+from app.core.errors import AIUnavailableError, DocumentNotReadyError, ResourceNotFoundError
 from app.db.mongo import get_conversations_collection, get_messages_collection
 from app.schemas.chat import (
     AskRequest,
@@ -29,8 +29,9 @@ from app.schemas.chat import (
     ConversationList,
     ConversationPublic,
     MessagePublic,
+    Source,
 )
-from app.services import knowledge_service
+from app.services import document_service, knowledge_service
 
 logger = logging.getLogger("app.chat")
 
@@ -113,21 +114,37 @@ def _fallback_title(question: str) -> str:
     return title if len(title) <= 60 else title[:57].rstrip() + "…"
 
 
-async def _ensure_conversation(current_user: CurrentUser, payload: AskRequest, language: str) -> dict[str, Any]:
+async def _ensure_conversation(
+    current_user: CurrentUser,
+    payload: AskRequest,
+    language: str,
+    attached: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Find or create the thread. `attached` is a document the caller owns, already checked."""
     coll = get_conversations_collection()
     if payload.conversation_id:
         conversation = await coll.find_one(_owned_filter(current_user, payload.conversation_id))
         if conversation is None:
             raise ResourceNotFoundError("Conversation not found.")
+        if attached is not None and conversation.get("document_id") != attached["_id"]:
+            # A file attached part-way through: from here on the thread answers from it.
+            changes = {
+                "mode": "document",
+                "document_id": attached["_id"],
+                "document_title": attached["title"],
+            }
+            await coll.update_one(_owned_filter(current_user, payload.conversation_id), {"$set": changes})
+            conversation.update(changes)
         return conversation
 
     now = datetime.now(timezone.utc)
     conversation: dict[str, Any] = {
         "owner_id": _owner(current_user),
         "title": _fallback_title(payload.question),
-        "mode": payload.mode,
+        "mode": "document" if attached is not None else payload.mode,
         "language": language,
-        "document_id": ObjectId(payload.document_id) if payload.document_id else None,
+        "document_id": attached["_id"] if attached is not None else None,
+        "document_title": attached["title"] if attached is not None else None,
         "message_count": 0,
         "created_at": now,
         "updated_at": now,
@@ -135,6 +152,46 @@ async def _ensure_conversation(current_user: CurrentUser, payload: AskRequest, l
     result = await coll.insert_one(conversation)
     conversation["_id"] = result.inserted_id
     return conversation
+
+
+async def _document_passages(
+    current_user: CurrentUser, question: str, document: dict[str, Any]
+) -> tuple[list[tuple[str, str]], list[Source]]:
+    """Context for a question about one of the caller's documents.
+
+    A short document (an ID card, a two-page agreement) is given to the model
+    whole: nothing can be missed by retrieval, and "summarise this" works. A
+    long one is answered from the chunks closest to the question.
+    """
+    if document.get("status") != "ready":
+        raise DocumentNotReadyError()
+
+    title = document["title"]
+    pages = document.get("pages") or []
+    whole = int(document.get("char_count", 0)) <= settings.DOCUMENT_CONTEXT_CHARS or not document.get("indexed")
+    scores: list[float] = []
+    if whole:
+        budget = settings.DOCUMENT_CONTEXT_CHARS
+        selected: list[tuple[int, str]] = []
+        for page in pages:
+            if budget <= 0:
+                break
+            text = page["text"][:budget]
+            budget -= len(text)
+            selected.append((int(page["page"]), text))
+    else:
+        hits = await knowledge_service.retrieve_document(
+            question, owner_id=current_user.id, document_id=str(document["_id"])
+        )
+        selected = [(int(hit.metadata.get("page") or 1), hit.text) for hit in hits]
+        scores = [hit.score for hit in hits]
+
+    passages = [(f"p. {page}", text) for page, text in selected]
+    sources = [
+        knowledge_service.page_source(title, page, text, 1.0 if whole else scores[index])
+        for index, (page, text) in enumerate(selected)
+    ]
+    return passages, sources
 
 
 async def _history(current_user: CurrentUser, conversation_id: ObjectId) -> list[Message]:
@@ -153,24 +210,32 @@ async def _history(current_user: CurrentUser, conversation_id: ObjectId) -> list
 
 async def ask(current_user: CurrentUser, payload: AskRequest) -> AskResponse:
     language = detect(payload.question)
-    conversation = await _ensure_conversation(current_user, payload, language)
+    # An attached document is looked up through the owner filter before anything
+    # is created, so someone else's id (or a malformed one) is a plain 404.
+    attached = (
+        await document_service.get_owned_record(current_user, payload.document_id)
+        if payload.document_id
+        else None
+    )
+    conversation = await _ensure_conversation(current_user, payload, language, attached)
     mode = conversation.get("mode", payload.mode)
 
     # 1. Retrieve.
     if mode == "document":
-        document_id = str(conversation.get("document_id") or payload.document_id or "")
-        if not document_id:
-            raise ResourceNotFoundError("This conversation has no document attached.")
-        hits = await knowledge_service.retrieve_document(
-            payload.question, owner_id=current_user.id, document_id=document_id
-        )
+        document = attached
+        if document is None:
+            document_id = str(conversation.get("document_id") or "")
+            if not document_id:
+                raise ResourceNotFoundError("This conversation has no document attached.")
+            # Raises 404 if the document was deleted since it was attached.
+            document = await document_service.get_owned_record(current_user, document_id)
+        passages, sources = await _document_passages(current_user, payload.question, document)
     else:
         # Best-effort English rewrite of the question for retrieval (None if the model is down).
         rewritten = await query_rewrite.rewrite(payload.question)
         hits = await knowledge_service.retrieve_law(payload.question, rewrite=rewritten)
-
-    sources = [knowledge_service.to_source(hit) for hit in hits]
-    passages = [(source.label, hit.text) for source, hit in zip(sources, hits)]
+        sources = [knowledge_service.to_source(hit) for hit in hits]
+        passages = [(source.label, hit.text) for source, hit in zip(sources, hits)]
 
     # 2. Generate.
     messages = [Message(role="system", content=prompts.system_prompt(mode, language))]

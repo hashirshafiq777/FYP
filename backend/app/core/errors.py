@@ -91,6 +91,34 @@ class AIUnavailableError(AppError):
     message = "The assistant is unavailable right now. Please try again in a moment."
 
 
+class FileTooLargeError(AppError):
+    status_code = status.HTTP_413_CONTENT_TOO_LARGE
+    code = "file_too_large"
+    message = "The file is too large."
+
+
+class UnsupportedFileError(AppError):
+    """Not a PDF, image, Word (.docx) or plain-text file - judged by content, not by name."""
+
+    status_code = status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+    code = "unsupported_file_type"
+    message = "This file type is not supported. Upload a PDF, an image, a .docx or a .txt file."
+
+
+class EmptyFileError(AppError):
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    code = "empty_file"
+    message = "The file is empty."
+
+
+class DocumentNotReadyError(AppError):
+    """The document exists and is yours, but its text is not available (yet)."""
+
+    status_code = status.HTTP_409_CONFLICT
+    code = "document_not_ready"
+    message = "This document has not finished processing."
+
+
 def error_body(code: str, message: str, details: Any = None) -> dict[str, Any]:
     body: dict[str, Any] = {"error": {"code": code, "message": message}}
     if details is not None:

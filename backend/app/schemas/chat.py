@@ -22,7 +22,8 @@ class AskRequest(BaseModel):
     question: Question
     conversation_id: str | None = None
     mode: ChatMode = "law"
-    # Only for mode="document": which of the caller's documents to answer from.
+    # One of the caller's own documents to answer from. Sending it switches the
+    # conversation to document mode, whether it is new or already under way.
     document_id: str | None = None
 
     @field_validator("question")
@@ -78,6 +79,8 @@ class ConversationPublic(BaseModel):
     mode: ChatMode
     language: ChatLanguage
     document_id: str | None = None
+    # Title of the attached document when it was attached (mode="document").
+    document_title: str | None = None
     message_count: int = 0
     created_at: datetime
     updated_at: datetime
@@ -90,6 +93,7 @@ class ConversationPublic(BaseModel):
             mode=document.get("mode", "law"),
             language=document.get("language", "en"),
             document_id=str(document["document_id"]) if document.get("document_id") else None,
+            document_title=document.get("document_title") or None,
             message_count=int(document.get("message_count", 0)),
             created_at=document["created_at"],
             updated_at=document.get("updated_at", document["created_at"]),

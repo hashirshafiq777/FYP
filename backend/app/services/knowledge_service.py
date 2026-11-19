@@ -22,7 +22,7 @@ import re
 import threading
 from typing import Any
 
-from app.ai import embeddings, glossary, vector_store
+from app.ai import chunking, embeddings, glossary, vector_store
 from app.ai.rewrite import Rewrite
 from app.ai.vector_store import LAW_COLLECTION, USER_DOCS_COLLECTION, Hit
 from app.core.config import settings
@@ -250,6 +250,60 @@ def _retrieve_document_sync(question: str, owner_id: str, document_id: str, k: i
     vector = embeddings.embed_query(question)
     where = {"$and": [{"owner_id": owner_id}, {"document_id": document_id}]}
     return vector_store.query(USER_DOCS_COLLECTION, vector, k=k, where=where)
+
+
+# ----------------------------------------------------------- user documents
+
+
+def index_document(owner_id: str, document_id: str, title: str, pages: list[tuple[int, str]]) -> int:
+    """(Re)index one uploaded document. Synchronous: embeds on CPU. Returns the chunk count.
+
+    Every chunk carries `owner_id` and `document_id`, and `_retrieve_document_sync`
+    filters by both, so one user's text can never be retrieved for another.
+    """
+    delete_document_chunks(owner_id, document_id)
+    ids: list[str] = []
+    texts: list[str] = []
+    metadatas: list[dict[str, Any]] = []
+    for page, text in pages:
+        for chunk in chunking.chunk_text(text):
+            ids.append(f"{document_id}-p{page}-{chunk.index}")
+            texts.append(chunk.text)
+            metadatas.append(
+                {
+                    "owner_id": owner_id,
+                    "document_id": document_id,
+                    "title": title,
+                    "page": page,
+                    "kind": "document",
+                }
+            )
+    if not ids:
+        return 0
+    vectors = embeddings.embed_documents(texts)
+    vector_store.add(USER_DOCS_COLLECTION, ids=ids, texts=texts, vectors=vectors, metadatas=metadatas)
+    return len(ids)
+
+
+def delete_document_chunks(owner_id: str, document_id: str) -> None:
+    if vector_store.count(USER_DOCS_COLLECTION) == 0:
+        return
+    vector_store.delete_where(
+        USER_DOCS_COLLECTION, {"$and": [{"owner_id": owner_id}, {"document_id": document_id}]}
+    )
+
+
+def page_source(title: str, page: int, text: str, score: float = 1.0) -> Source:
+    """A page of the user's own document as a citeable source, labelled "p. N"."""
+    excerpt = text if len(text) <= 600 else text[:600].rsplit(" ", 1)[0] + " …"
+    return Source(
+        label=f"p. {page}",
+        title=title,
+        kind="document",
+        page=page,
+        excerpt=excerpt,
+        score=round(score, 4),
+    )
 
 
 async def retrieve_law(question: str, *, k: int | None = None, rewrite: Rewrite | None = None) -> list[Hit]:

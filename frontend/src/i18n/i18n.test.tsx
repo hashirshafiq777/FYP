@@ -45,6 +45,8 @@ describe("dictionaries", () => {
         "chat.suggest.1",
         "chat.suggest.2",
         "chat.suggest.3",
+        "chat.suggest.document.2",
+        "chat.suggest.document.3",
         "lang.en",
         "lang.ur",
         "language.english",

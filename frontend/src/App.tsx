@@ -1,10 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import {
-  AgreementsIcon,
-  DocumentsIcon,
-  HistoryIcon,
-} from "./components/icons";
+import { AgreementsIcon, HistoryIcon } from "./components/icons";
 import AuthGate from "./auth/AuthGate";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import PublicOnlyRoute from "./auth/PublicOnlyRoute";
@@ -13,6 +9,7 @@ import AppShell from "./layouts/AppShell";
 import Chat from "./pages/Chat";
 import ComingSoon from "./pages/ComingSoon";
 import Dashboard from "./pages/Dashboard";
+import Documents from "./pages/Documents";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import SignUp from "./pages/SignUp";
@@ -37,16 +34,8 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route
-              path="/documents"
-              element={
-                <ComingSoon
-                  titleKey="coming.documents.title"
-                  bodyKey="coming.documents.body"
-                  icon={<DocumentsIcon size={24} />}
-                />
-              }
-            />
+            {/* Optional segment for the same reason as chat: selecting a document does not remount. */}
+            <Route path="/documents/:documentId?" element={<Documents />} />
             {/* One route with an optional segment, so opening a thread does not remount the page. */}
             <Route path="/chat/:conversationId?" element={<Chat />} />
             <Route

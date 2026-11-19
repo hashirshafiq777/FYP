@@ -218,6 +218,11 @@ async function toApiError(response: Response): Promise<ApiError> {
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  /**
+   * Multipart body (file uploads). Sent as-is: the browser sets the
+   * `Content-Type` itself, boundary included. Mutually exclusive with `body`.
+   */
+  form?: FormData;
   /** Send the bearer token with this request. */
   auth?: boolean;
   /** Caller-owned cancellation, combined with the internal timeout. */
@@ -229,6 +234,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const {
     method = "GET",
     body,
+    form,
     auth = false,
     signal,
     timeoutMs = REQUEST_TIMEOUT_MS,
@@ -256,7 +262,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: form ?? (body === undefined ? undefined : JSON.stringify(body)),
       signal: controller.signal,
     });
   } catch (error) {

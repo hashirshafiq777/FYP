@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -171,6 +171,111 @@ describe("Chat page", () => {
         "Khula kaise lein?",
       ),
     );
+  });
+
+  it("attaches a file, waits for it to be read, and asks about that document", async () => {
+    setAccessToken("token");
+    const user = userEvent.setup();
+    const uploaded = { id: "d1", title: "card", status: "queued", error: null };
+    const documentConversation = {
+      ...CONVERSATION,
+      mode: "document",
+      document_id: "d1",
+      document_title: "CNIC - Muhammad Ali",
+    };
+    let polls = 0;
+    const spy = mockApi((url, init) => {
+      if (url.endsWith("/documents/upload") && init?.method === "POST") {
+        return jsonResponse(201, uploaded);
+      }
+      if (url.endsWith("/documents/d1")) {
+        polls += 1;
+        return jsonResponse(200, {
+          ...uploaded,
+          status: polls < 2 ? "ocr" : "ready",
+          pages: [],
+          fields: [],
+        });
+      }
+      if (url.endsWith("/chat/ask") && init?.method === "POST") {
+        return jsonResponse(200, {
+          ...ANSWER,
+          conversation: documentConversation,
+          answer: { ...ANSWER.answer, content: "The name on the card is Muhammad Ali [p. 1].", sources: [] },
+        });
+      }
+      return defaultHandler(url, init);
+    });
+    renderChat();
+    await screen.findByText(en["chat.welcome.title"]);
+
+    const file = new File(["fake image bytes"], "card.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByTestId("chat-file-input"), { target: { files: [file] } });
+
+    // While the file is being read the question cannot be sent.
+    expect(await screen.findByText(en["chat.attach.reading"])).toBeTruthy();
+    await user.type(screen.getByLabelText(en["chat.composer.label"]), "Is card par naam kya hai?");
+    expect(
+      (screen.getByRole("button", { name: en["chat.composer.send"] }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+
+    expect(
+      await screen.findByText(en["chat.attach.ready"], undefined, { timeout: 5000 }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: en["chat.composer.send"] }));
+
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === "P" && (element.textContent ?? "").includes("Muhammad Ali"),
+      ),
+    ).toBeTruthy();
+
+    // The question went out tied to the uploaded document.
+    const askCall = spy.mock.calls.find((call) => String(call[0]).endsWith("/chat/ask"));
+    const askInit = askCall?.[1] as RequestInit | undefined;
+    expect(JSON.parse(String(askInit?.body))).toEqual({
+      question: "Is card par naam kya hai?",
+      conversation_id: null,
+      mode: "document",
+      document_id: "d1",
+    });
+
+    // The chip is gone and the header now names the document the thread answers from.
+    expect(screen.queryByText(en["chat.attach.ready"])).toBeNull();
+    expect(screen.getByText("CNIC - Muhammad Ali")).toBeTruthy();
+  });
+
+  it("shows why an attachment failed and still lets the user remove it", async () => {
+    setAccessToken("token");
+    const user = userEvent.setup();
+    mockApi((url, init) => {
+      if (url.endsWith("/documents/upload") && init?.method === "POST") {
+        return jsonResponse(201, { id: "d2", title: "scan", status: "queued", error: null });
+      }
+      if (url.endsWith("/documents/d2")) {
+        return jsonResponse(200, {
+          id: "d2",
+          title: "scan",
+          status: "failed",
+          error: "ocr_unavailable",
+          pages: [],
+          fields: [],
+        });
+      }
+      return defaultHandler(url, init);
+    });
+    renderChat();
+    await screen.findByText(en["chat.welcome.title"]);
+
+    fireEvent.change(screen.getByTestId("chat-file-input"), {
+      target: { files: [new File(["x"], "scan.png", { type: "image/png" })] },
+    });
+
+    expect(await screen.findByText(en["documents.error.ocr_unavailable"])).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: en["chat.attach.remove"] }));
+    expect(screen.queryByText(en["documents.error.ocr_unavailable"])).toBeNull();
+    expect(screen.queryByText("scan.png")).toBeNull();
   });
 
   it("warns when no language-model key is configured on the server", async () => {

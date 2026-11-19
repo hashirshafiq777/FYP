@@ -23,6 +23,7 @@ import "./styles/auth.css";
 import "./styles/shell.css";
 import "./styles/dashboard.css";
 import "./styles/chat.css";
+import "./styles/documents.css";
 
 const container = document.getElementById("root");
 if (!container) throw new Error('Root element "#root" was not found.');

@@ -64,6 +64,17 @@ class Settings(BaseSettings):
     # Low cuts reasoning roughly six-fold, which is what leaves room for the answer.
     LLM_REASONING_EFFORT: str = "low"
 
+    # ------------------------------------------------------- Documents / OCR
+    # Scanned pages and photos are read by a vision model (the image leaves the
+    # server for the provider). Groq first, Gemini as the fallback.
+    GROQ_VISION_MODEL: str = "qwen/qwen3.8-27b"
+    MAX_UPLOAD_MB: int = Field(default=15, ge=1, le=100)
+    # Cap on pages sent to the vision model for one document (free-tier budget).
+    MAX_OCR_PAGES: int = Field(default=15, ge=1, le=200)
+    # A document whose whole text fits in this many characters is given to the
+    # model in full; a longer one is answered from retrieved chunks.
+    DOCUMENT_CONTEXT_CHARS: int = Field(default=12000, ge=1000, le=100000)
+
     @property
     def ai_data_dir(self) -> Path:
         return (Path(__file__).resolve().parent.parent.parent / self.AI_DATA_DIR).resolve()
@@ -75,6 +86,15 @@ class Settings(BaseSettings):
     @property
     def ai_cache_dir(self) -> Path:
         return self.ai_data_dir / "models"
+
+    @property
+    def uploads_dir(self) -> Path:
+        """Original uploaded files. Under backend/data, which is git-ignored."""
+        return self.ai_data_dir / "uploads"
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.MAX_UPLOAD_MB * 1024 * 1024
 
     @property
     def knowledge_dir(self) -> Path:

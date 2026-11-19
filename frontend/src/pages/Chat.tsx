@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import {
   ask,
@@ -12,16 +12,25 @@ import {
   type Conversation,
 } from "../api/chat";
 import { ApiError } from "../api/client";
+import { uploadDocument, waitForDocument } from "../api/documents";
 import Banner from "../components/Banner";
 import Button from "../components/Button";
-import Composer from "../components/chat/Composer";
+import Composer, { type Attachment } from "../components/chat/Composer";
 import MessageBubble from "../components/chat/MessageBubble";
-import { ChatIcon, CloseIcon, DraftIcon, MenuIcon, ShieldIcon } from "../components/icons";
+import {
+  ChatIcon,
+  CloseIcon,
+  DocumentsIcon,
+  DraftIcon,
+  MenuIcon,
+  ShieldIcon,
+} from "../components/icons";
 import Skeleton from "../components/Skeleton";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import type { TranslationKey } from "../i18n/en";
 import { useI18n } from "../i18n/useI18n";
 import { apiErrorKey } from "../lib/apiErrors";
+import { documentErrorKey, uploadErrorKey, validateFile } from "../lib/documentErrors";
 
 /** Starter questions, one per supported input language, so the demo shows all three. */
 const SUGGESTIONS: TranslationKey[] = [
@@ -31,13 +40,32 @@ const SUGGESTIONS: TranslationKey[] = [
   "chat.suggest.4",
 ];
 
+/** Starters for a thread that answers from an uploaded file. */
+const DOCUMENT_SUGGESTIONS: TranslationKey[] = [
+  "chat.suggest.document.1",
+  "chat.suggest.document.2",
+  "chat.suggest.document.3",
+  "chat.suggest.document.4",
+];
+
 function isAbort(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
+}
+
+/** "Ask about this document" on the Documents page arrives here with the document attached. */
+function attachmentFromNavigation(state: unknown): Attachment | null {
+  if (state === null || typeof state !== "object") return null;
+  const attach = (state as { attachDocument?: unknown }).attachDocument;
+  if (attach === null || typeof attach !== "object") return null;
+  const { id, title } = attach as { id?: unknown; title?: unknown };
+  if (typeof id !== "string" || typeof title !== "string") return null;
+  return { name: title, stage: "ready", documentId: id };
 }
 
 export default function Chat() {
   const { t, formatRelativeTime } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const { conversationId } = useParams<{ conversationId: string }>();
   useDocumentTitle(t("chat.documentTitle"));
 
@@ -62,8 +90,57 @@ export default function Chat() {
   const [error, setError] = useState<TranslationKey | null>(null);
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const [listOpen, setListOpen] = useState(false);
+  // A file attached to the next question. It goes with that question only:
+  // once it is sent, the conversation itself remembers the document.
+  const [attachment, setAttachment] = useState<Attachment | null>(() =>
+    attachmentFromNavigation(location.state),
+  );
+  const attachAbortRef = useRef<AbortController | null>(null);
 
   const threadEndRef = useRef<HTMLDivElement>(null);
+
+  const clearAttachment = useCallback(() => {
+    attachAbortRef.current?.abort();
+    attachAbortRef.current = null;
+    setAttachment(null);
+  }, []);
+
+  // Stop polling a half-read file when the page goes away.
+  useEffect(() => () => attachAbortRef.current?.abort(), []);
+
+  const handleAttach = useCallback(async (file: File) => {
+    attachAbortRef.current?.abort();
+    const controller = new AbortController();
+    attachAbortRef.current = controller;
+    setError(null);
+
+    const invalid = validateFile(file);
+    if (invalid) {
+      setAttachment({ name: file.name, stage: "failed", errorKey: invalid });
+      return;
+    }
+
+    setAttachment({ name: file.name, stage: "uploading" });
+    try {
+      const uploaded = await uploadDocument(file, controller.signal);
+      setAttachment({ name: file.name, stage: "reading", documentId: uploaded.id });
+      const settled = await waitForDocument(uploaded.id, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      setAttachment(
+        settled.status === "ready"
+          ? { name: file.name, stage: "ready", documentId: settled.id }
+          : {
+              name: file.name,
+              stage: "failed",
+              documentId: settled.id,
+              errorKey: documentErrorKey(settled.error),
+            },
+      );
+    } catch (err: unknown) {
+      if (isAbort(err) || controller.signal.aborted) return;
+      setAttachment({ name: file.name, stage: "failed", errorKey: uploadErrorKey(err) });
+    }
+  }, []);
 
   // --- status + conversation list, once per mount
   useEffect(() => {
@@ -117,9 +194,12 @@ export default function Chat() {
       setSending(true);
       setError(null);
       setPendingQuestion(question);
+      const documentId = attachment?.stage === "ready" ? (attachment.documentId ?? null) : null;
       try {
-        const result = await ask(question, { conversationId: conversationId ?? null });
+        const result = await ask(question, { conversationId: conversationId ?? null, documentId });
         setPendingQuestion(null);
+        // Sent: the thread now carries the document, so the chip has done its job.
+        if (documentId) clearAttachment();
         setThread((current) => ({
           key: result.conversation.id,
           messages: [
@@ -138,13 +218,17 @@ export default function Chat() {
         setError(
           err instanceof ApiError && err.code === "ai_unavailable"
             ? "chat.error.unavailable"
-            : apiErrorKey(err),
+            : err instanceof ApiError && err.code === "document_not_ready"
+              ? "chat.error.documentNotReady"
+              : err instanceof ApiError && err.kind === "not_found"
+                ? "chat.error.documentMissing"
+                : apiErrorKey(err),
         );
       } finally {
         setSending(false);
       }
     },
-    [conversationId, threadKey, navigate, upsertConversation],
+    [conversationId, threadKey, navigate, upsertConversation, attachment, clearAttachment],
   );
 
   const handleDelete = useCallback(
@@ -160,7 +244,19 @@ export default function Chat() {
     [conversationId, navigate],
   );
 
-  const notReady = status !== null && !status.ready;
+  // Document mode: the open thread already answers from a file, or one is about to be sent.
+  const currentConversation = (conversations ?? []).find((item) => item.id === conversationId);
+  const pendingDocument = attachment?.stage === "ready" ? attachment.name : null;
+  const documentTitle =
+    pendingDocument ??
+    (currentConversation?.mode === "document"
+      ? (currentConversation.document_title ?? t("chat.mode.document"))
+      : null);
+  const documentMode = documentTitle !== null;
+
+  // Only the language model is needed to read a document; the law index is not.
+  const notReady =
+    status !== null && !status.ready && !(documentMode && status.providers.length > 0);
   const loadingThread = messages === null;
   const emptyThread = messages !== null && messages.length === 0 && pendingQuestion === null;
 
@@ -174,6 +270,7 @@ export default function Chat() {
           onClick={() => {
             setListOpen(false);
             setDraft(undefined);
+            clearAttachment();
             navigate("/chat");
           }}
         >
@@ -212,6 +309,7 @@ export default function Chat() {
                   aria-current={active ? "page" : undefined}
                   onClick={() => {
                     setListOpen(false);
+                    if (conversation.id !== conversationId) clearAttachment();
                     navigate(`/chat/${conversation.id}`);
                   }}
                 >
@@ -262,13 +360,29 @@ export default function Chat() {
             <MenuIcon size={20} />
           </button>
           <div className="chat__head-text">
-            <h2 className="chat__title">{t("chat.title")}</h2>
-            <p className="chat__sub">{t("chat.subtitle")}</p>
+            <h2 className="chat__title">
+              {t(documentMode ? "chat.title.document" : "chat.title")}
+            </h2>
+            <p className="chat__sub">
+              {t(documentMode ? "chat.subtitle.document" : "chat.subtitle")}
+            </p>
           </div>
-          <span className="chat__mode" title={t("chat.mode.lawTitle")}>
-            <ShieldIcon size={14} />
-            <span>{t("chat.mode.law")}</span>
-          </span>
+          {documentTitle !== null ? (
+            <span
+              className="chat__mode chat__mode--document"
+              title={t("chat.mode.documentTitle", { title: documentTitle })}
+            >
+              <DocumentsIcon size={14} />
+              <span className="chat__mode-name" dir="auto">
+                {documentTitle}
+              </span>
+            </span>
+          ) : (
+            <span className="chat__mode" title={t("chat.mode.lawTitle")}>
+              <ShieldIcon size={14} />
+              <span>{t("chat.mode.law")}</span>
+            </span>
+          )}
         </header>
 
         {notReady ? (
@@ -296,10 +410,17 @@ export default function Chat() {
               <span className="chat__welcome-icon" aria-hidden="true">
                 <ChatIcon size={24} />
               </span>
-              <h3 className="chat__welcome-title">{t("chat.welcome.title")}</h3>
-              <p className="chat__welcome-body">{t("chat.welcome.body")}</p>
+              <h3 className="chat__welcome-title">
+                {t(documentMode ? "chat.welcome.documentTitle" : "chat.welcome.title")}
+              </h3>
+              <p className="chat__welcome-body">
+                {t(documentMode ? "chat.welcome.documentBody" : "chat.welcome.body")}
+              </p>
+              {documentMode ? null : (
+                <p className="chat__welcome-hint">{t("chat.welcome.attachHint")}</p>
+              )}
               <ul className="chat__suggestions">
-                {SUGGESTIONS.map((key) => (
+                {(documentMode ? DOCUMENT_SUGGESTIONS : SUGGESTIONS).map((key) => (
                   <li key={key}>
                     <button
                       type="button"
@@ -340,7 +461,9 @@ export default function Chat() {
                         <i />
                         <i />
                       </span>
-                      <span className="visually-hidden">{t("chat.thinking")}</span>
+                      <span className="visually-hidden">
+                        {t(documentMode ? "chat.thinking.document" : "chat.thinking")}
+                      </span>
                     </div>
                   </li>
                 </>
@@ -356,7 +479,16 @@ export default function Chat() {
           </Banner>
         ) : null}
 
-        <Composer disabled={loadingThread} sending={sending} onSend={handleSend} draft={draft} />
+        <Composer
+          disabled={loadingThread}
+          sending={sending}
+          onSend={handleSend}
+          draft={draft}
+          attachment={attachment}
+          onAttach={(file) => void handleAttach(file)}
+          onRemoveAttachment={clearAttachment}
+          documentMode={documentMode}
+        />
         <p className="chat__disclaimer">{t("app.disclaimer")}</p>
       </section>
     </div>
